@@ -1,0 +1,353 @@
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    min-height: 100%;
+}
+
+body.registro-page {
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 12px;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: linear-gradient(135deg, #102B3F, #176B52);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* CONTENEDOR HORIZONTAL */
+
+.registro-container {
+    width: 100%;
+    max-width: 1000px;
+    display: grid;
+    grid-template-columns: 52% 48%;
+    background: #244b3b;
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.2);
+}
+
+/* PANEL IZQUIERDO SIN IMAGEN */
+
+.registro-visual {
+    min-width: 0;
+    background: #ffffff;
+    background-image: none;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+/* LOGO */
+
+.registro-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    color: #102B3F;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+.registro-logo i {
+    color: #176B52;
+    font-size: 25px;
+}
+
+/* TEXTO IZQUIERDO */
+
+.registro-texto {
+    color: #102B3F;
+    max-width: 350px;
+    text-align: center;
+}
+
+.registro-texto h1 {
+    font-size: 36px;
+    font-weight: 700;
+    margin: 0 0 15px;
+    color: #102B3F;
+}
+
+.registro-texto p {
+    font-size: 15px;
+    line-height: 1.6;
+    margin: 0;
+    color: #176B52;
+}
+
+/* FORMULARIO DERECHO */
+
+.registro-form-panel {
+    min-width: 0;
+    padding: 20px 30px;
+    background: #244b3b;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: visible;
+}
+
+/* ENCABEZADO */
+
+.registro-form-header {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.registro-icono {
+    width: 35px;
+    height: 35px;
+    margin: 0 auto 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #376b58;
+    color: #ffffff;
+    border-radius: 50%;
+    font-size: 17px;
+}
+
+.registro-form-header h2 {
+    font-size: 21px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0 0 5px;
+}
+
+.registro-form-header p {
+    font-size: 11px;
+    color: #d1e3da;
+    margin: 0;
+}
+
+/* CAMPOS */
+
+.registro-form {
+    width: 100%;
+}
+
+.registro-fila {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+}
+
+.registro-form .form-group {
+    margin-bottom: 8px;
+}
+
+.registro-form label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 4px;
+}
+
+.registro-form .form-control,
+.registro-form .form-select {
+    width: 100%;
+    height: 34px;
+    min-height: 34px;
+    padding: 5px 10px;
+    border: 1px solid #416b5b;
+    border-radius: 18px;
+    background: #183c2e;
+    color: #ffffff;
+    font-size: 12px;
+    box-shadow: none;
+}
+
+.registro-form .form-control::placeholder {
+    color: #a5bdb2;
+}
+
+.registro-form .form-control:focus,
+.registro-form .form-select:focus {
+    background: #183c2e;
+    color: #ffffff;
+    border-color: #68b8aa;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(104, 184, 170, 0.18);
+}
+
+.registro-form .form-select option {
+    background: #183c2e;
+    color: #ffffff;
+}
+
+/* BOTÓN */
+
+.registro-boton {
+    width: 100%;
+    height: 36px;
+    margin-top: 5px;
+    border: none;
+    border-radius: 20px;
+    background: #69b4b1;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.registro-boton:hover {
+    background: #4b9e9a;
+}
+
+/* INICIAR SESIÓN */
+
+.registro-login {
+    text-align: center;
+    margin-top: 10px;
+}
+
+.registro-login p {
+    display: inline;
+    margin-right: 4px;
+    color: #d1e3da;
+    font-size: 11px;
+}
+
+.registro-login a {
+    color: #8bd4cf;
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.registro-login a:hover {
+    color: #ffffff;
+}
+
+/* PIE */
+
+.registro-footer {
+    margin-top: 10px;
+    color: #a9c5b7;
+    font-size: 10px;
+    text-align: center;
+}
+
+/* PANTALLAS BAJAS */
+
+@media (max-height: 650px) {
+    body.registro-page {
+        align-items: flex-start;
+    }
+
+    .registro-form-panel {
+        padding: 12px 25px;
+    }
+
+    .registro-form .form-group {
+        margin-bottom: 5px;
+    }
+}
+
+/* TABLETS */
+
+@media (max-width: 850px) {
+    .registro-container {
+        grid-template-columns: 43% 57%;
+    }
+
+    .registro-form-panel {
+        padding: 15px 20px;
+    }
+
+    .registro-texto h1 {
+        font-size: 28px;
+    }
+}
+
+/* CELULARES - SIEMPRE HORIZONTAL */
+
+@media (max-width: 700px) {
+    body.registro-page {
+        align-items: flex-start;
+    }
+
+    .registro-container {
+        grid-template-columns: 40% 60%;
+        border-radius: 20px;
+    }
+
+    .registro-visual {
+        padding: 12px;
+    }
+
+    .registro-logo {
+        font-size: 13px;
+        flex-wrap: wrap;
+    }
+
+    .registro-logo i {
+        font-size: 18px;
+    }
+
+    .registro-texto h1 {
+        font-size: 20px;
+    }
+
+    .registro-texto p {
+        font-size: 10px;
+    }
+
+    .registro-form-panel {
+        padding: 15px 12px;
+    }
+
+    .registro-fila {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .registro-form .form-control,
+    .registro-form .form-select {
+        height: 36px;
+        min-height: 36px;
+    }
+}
+
+/* CELULARES PEQUEÑOS */
+
+@media (max-width: 400px) {
+    .registro-container {
+        grid-template-columns: 35% 65%;
+    }
+
+    .registro-visual {
+        padding: 8px;
+    }
+
+    .registro-texto h1 {
+        font-size: 17px;
+    }
+
+    .registro-texto p {
+        font-size: 9px;
+    }
+
+    .registro-form-panel {
+        padding: 12px 8px;
+    }
+}

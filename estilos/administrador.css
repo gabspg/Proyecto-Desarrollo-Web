@@ -1,0 +1,591 @@
+
+/* ============================================================
+   SISTEMA DE GESTIÓN DE TUTORÍAS Y ASESORÍAS ACADÉMICAS
+   MÓDULO: ADMINISTRADOR
+   ARCHIVO: administrador.css
+   ============================================================ */
+
+
+/* ============================================================
+   1. COLORES PRINCIPALES
+   ============================================================ */
+
+:root {
+    --admin-azul-marino: #102B3F;
+    --admin-azul-petroleo: #145A68;
+    --admin-verde-bosque: #176B52;
+    --admin-verde-esmeralda: #238C80;
+
+    --admin-fondo: #F4F7F8;
+    --admin-blanco: #FFFFFF;
+
+    --admin-texto: #253746;
+    --admin-texto-secundario: #788B96;
+
+    --admin-borde: #E4EBEF;
+    --admin-sombra: 0 6px 24px rgba(16, 43, 63, 0.06);
+}
+
+
+/* ============================================================
+   2. ESTILOS GENERALES
+   ============================================================ */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background-color: var(--admin-fondo);
+    color: var(--admin-texto);
+    font-family: "Segoe UI", Arial, sans-serif;
+}
+
+a {
+    transition: all 0.2s ease;
+}
+
+
+/* ============================================================
+   3. MENÚ LATERAL
+   ============================================================ */
+
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+
+    width: 255px;
+    height: 100vh;
+    padding: 30px 18px;
+
+    display: flex;
+    flex-direction: column;
+
+    background-color: var(--admin-azul-marino);
+    overflow-y: auto;
+}
+
+.logo {
+    padding: 8px 14px 35px;
+
+    color: var(--admin-blanco);
+    font-size: 21px;
+    font-weight: 700;
+}
+
+.logo i {
+    margin-right: 8px;
+    color: #49C5AA;
+}
+
+.menu-titulo {
+    padding: 0 14px;
+    margin-bottom: 12px;
+
+    color: #8DA5B2;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+}
+
+.sidebar a {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+
+    padding: 13px 15px;
+    margin-bottom: 8px;
+
+    color: #C9D8E0;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+
+    border-radius: 12px;
+}
+
+.sidebar a i {
+    font-size: 18px;
+}
+
+.sidebar a:hover {
+    background-color: #1D4557;
+    color: var(--admin-blanco);
+}
+
+.sidebar a.activo {
+    background-color: var(--admin-verde-bosque);
+    color: var(--admin-blanco);
+}
+
+.sidebar .salir {
+    margin-top: auto;
+    color: #FFD1D1;
+}
+
+.sidebar .salir:hover {
+    background-color: #783F49;
+    color: var(--admin-blanco);
+}
+
+
+/* ============================================================
+   4. CONTENIDO PRINCIPAL
+   ============================================================ */
+
+.contenido {
+    min-height: 100vh;
+    margin-left: 255px;
+    padding: 30px 42px;
+}
+
+
+/* ============================================================
+   5. BARRA SUPERIOR
+   ============================================================ */
+
+.barra-superior {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+
+    margin-bottom: 32px;
+}
+
+.titulo-pagina {
+    margin: 0;
+
+    color: var(--admin-azul-marino);
+    font-size: 25px;
+    font-weight: 700;
+}
+
+.subtitulo {
+    margin: 6px 0 0;
+
+    color: var(--admin-texto-secundario);
+    font-size: 13px;
+}
+
+.perfil {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    padding: 9px 16px;
+
+    background-color: var(--admin-blanco);
+    border: 1px solid var(--admin-borde);
+    border-radius: 14px;
+
+    box-shadow: var(--admin-sombra);
+}
+
+.avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 40px;
+    height: 40px;
+
+    background-color: var(--admin-azul-petroleo);
+    color: var(--admin-blanco);
+
+    border-radius: 12px;
+    font-weight: 700;
+}
+
+
+/* ============================================================
+   6. BANNER DE BIENVENIDA
+   ============================================================ */
+
+.bienvenida {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 38px 42px;
+    margin-bottom: 34px;
+
+    background: linear-gradient(
+        110deg,
+        var(--admin-azul-petroleo),
+        var(--admin-verde-bosque)
+    );
+
+    color: var(--admin-blanco);
+
+    border-radius: 22px;
+    overflow: hidden;
+}
+
+.bienvenida h2 {
+    margin-bottom: 12px;
+
+    color: var(--admin-blanco);
+    font-size: 29px;
+    font-weight: 700;
+}
+
+.bienvenida p {
+    max-width: 450px;
+    margin: 0;
+
+    color: #D8F0E9;
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.bienvenida-icono {
+    color: var(--admin-blanco);
+    font-size: 115px;
+    opacity: 0.18;
+    transform: rotate(-10deg);
+}
+
+
+/* ============================================================
+   7. TÍTULOS DE SECCIONES
+   ============================================================ */
+
+.seccion-titulo {
+    margin-bottom: 20px;
+
+    color: var(--admin-azul-marino);
+    font-size: 19px;
+    font-weight: 700;
+}
+
+
+/* ============================================================
+   8. TARJETAS DE ESTADÍSTICAS
+   ============================================================ */
+
+.estadistica {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    height: 100%;
+    padding: 24px;
+
+    color: var(--admin-blanco);
+    border-radius: 18px;
+    box-shadow: var(--admin-sombra);
+}
+
+.estadistica h3 {
+    margin-bottom: 5px;
+
+    color: var(--admin-blanco);
+    font-size: 33px;
+    font-weight: 700;
+}
+
+.estadistica p {
+    margin: 0;
+
+    color: var(--admin-blanco);
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.estadistica i {
+    color: var(--admin-blanco);
+    font-size: 35px;
+    opacity: 0.7;
+}
+
+.estadistica.azul {
+    background-color: #145A68;
+}
+
+.estadistica.verde {
+    background-color: #176B52;
+}
+
+.estadistica.petroleo {
+    background-color: #267C85;
+}
+
+.estadistica.marino {
+    background-color: #102B3F;
+}
+
+
+/* ============================================================
+   9. TARJETAS DE ACCESO RÁPIDO
+   ============================================================ */
+
+.tarjeta-accion {
+    height: 100%;
+    padding: 25px;
+
+    background-color: var(--admin-blanco);
+
+    border: 1px solid var(--admin-borde);
+    border-radius: 18px;
+
+    box-shadow: var(--admin-sombra);
+
+    transition: transform 0.2s ease,
+                box-shadow 0.2s ease;
+}
+
+.tarjeta-accion:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 30px rgba(16, 43, 63, 0.10);
+}
+
+.icono-accion {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 48px;
+    height: 48px;
+    margin-bottom: 18px;
+
+    background-color: #E5F2EF;
+    color: var(--admin-verde-bosque);
+
+    border-radius: 13px;
+    font-size: 23px;
+}
+
+.tarjeta-accion h5 {
+    color: var(--admin-azul-marino);
+    font-weight: 700;
+}
+
+.tarjeta-accion p {
+    min-height: 40px;
+
+    color: var(--admin-texto-secundario);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+
+/* ============================================================
+   10. BOTONES DEL ADMINISTRADOR
+   ============================================================ */
+
+.boton-accion {
+    display: inline-block;
+
+    padding: 10px 18px;
+
+    background-color: var(--admin-azul-petroleo);
+    color: var(--admin-blanco);
+
+    border: none;
+    border-radius: 10px;
+
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+
+    cursor: pointer;
+}
+
+.boton-accion:hover {
+    background-color: var(--admin-verde-bosque);
+    color: var(--admin-blanco);
+}
+
+.btn-primary {
+    background-color: var(--admin-azul-petroleo);
+    border-color: var(--admin-azul-petroleo);
+}
+
+.btn-primary:hover {
+    background-color: var(--admin-azul-marino);
+    border-color: var(--admin-azul-marino);
+}
+
+.btn-success {
+    background-color: var(--admin-verde-bosque);
+    border-color: var(--admin-verde-bosque);
+}
+
+.btn-success:hover {
+    background-color: #104D3B;
+    border-color: #104D3B;
+}
+
+
+/* ============================================================
+   11. TABLAS DEL ADMINISTRADOR
+   ============================================================ */
+
+.table-responsive {
+    background-color: var(--admin-blanco);
+
+    border: 1px solid var(--admin-borde);
+    border-radius: 16px;
+}
+
+.table {
+    margin-bottom: 0;
+    vertical-align: middle;
+}
+
+.table thead th {
+    padding: 16px;
+
+    background-color: var(--admin-azul-marino);
+    color: var(--admin-blanco);
+
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+}
+
+.table tbody td {
+    padding: 15px;
+
+    color: var(--admin-texto);
+    font-size: 13px;
+    border-color: var(--admin-borde);
+}
+
+.table tbody tr:hover td {
+    background-color: #EFF6F5;
+}
+
+
+/* ============================================================
+   12. FORMULARIOS DEL ADMINISTRADOR
+   ============================================================ */
+
+.form-control,
+.form-select {
+    padding: 11px 14px;
+
+    background-color: var(--admin-blanco);
+    color: var(--admin-texto);
+
+    border: 1px solid #D5E0E5;
+    border-radius: 10px;
+
+    font-size: 14px;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--admin-verde-esmeralda);
+
+    box-shadow: 0 0 0 3px rgba(35, 140, 128, 0.12);
+}
+
+.form-label {
+    margin-bottom: 7px;
+
+    color: var(--admin-azul-marino);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.card {
+    border: 1px solid var(--admin-borde);
+    border-radius: 18px;
+    box-shadow: var(--admin-sombra);
+}
+
+.card-header {
+    padding: 18px 22px;
+
+    background-color: var(--admin-blanco);
+    color: var(--admin-azul-marino);
+
+    border-bottom: 1px solid var(--admin-borde);
+    border-radius: 18px 18px 0 0 !important;
+
+    font-weight: 700;
+}
+
+.card-body {
+    padding: 24px;
+}
+
+
+/* ============================================================
+   13. ETIQUETAS DE ESTADO
+   ============================================================ */
+
+.badge {
+    padding: 7px 11px;
+
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+
+/* ============================================================
+   14. DISEÑO RESPONSIVO
+   ============================================================ */
+
+@media (max-width: 991px) {
+
+    .sidebar {
+        position: relative;
+
+        width: 100%;
+        height: auto;
+
+        padding: 20px;
+    }
+
+    .sidebar .salir {
+        margin-top: 15px;
+    }
+
+    .contenido {
+        margin-left: 0;
+        padding: 25px;
+    }
+
+    .bienvenida-icono {
+        display: none;
+    }
+
+}
+
+@media (max-width: 576px) {
+
+    .barra-superior {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .bienvenida {
+        padding: 28px;
+    }
+
+    .bienvenida h2 {
+        font-size: 23px;
+    }
+
+    .titulo-pagina {
+        font-size: 21px;
+    }
+
+    .estadistica {
+        padding: 20px;
+    }
+
+    .tarjeta-accion {
+        padding: 20px;
+    }
+
+}

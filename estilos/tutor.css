@@ -1,0 +1,345 @@
+
+/* ============================================================
+   SISTEMA: TUTORLINK
+   MÓDULO: TUTOR
+   ARCHIVO: tutor.css
+   ============================================================ */
+
+:root {
+    --tutor-oscuro: #102B3F;
+    --tutor-verde: #176B52;
+    --tutor-verde-claro: #49C5AA;
+    --tutor-blanco: #FFFFFF;
+    --tutor-fondo: #F3F6F9;
+    --tutor-texto: #243746;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: var(--tutor-fondo);
+    color: var(--tutor-texto);
+}
+
+/* ============================================================
+   MENÚ LATERAL
+   ============================================================ */
+
+.sidebar {
+    width: 260px;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    background: var(--tutor-oscuro);
+    padding: 28px 16px;
+    overflow-y: auto;
+}
+
+.logo {
+    padding: 8px 14px 35px;
+    color: var(--tutor-blanco);
+    font-size: 21px;
+    font-weight: 700;
+}
+
+.logo i {
+    margin-right: 8px;
+    color: var(--tutor-verde-claro);
+}
+
+.menu-titulo {
+    color: #91A5B4;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.3px;
+    padding: 15px 14px 10px;
+}
+
+.sidebar a,
+.menu-deshabilitado {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 15px;
+    margin-bottom: 5px;
+    border-radius: 10px;
+    text-decoration: none;
+    color: #DCE6ED;
+    font-size: 14px;
+    font-weight: 500;
+    transition: 0.2s;
+}
+
+.sidebar a i,
+.menu-deshabilitado i {
+    font-size: 18px;
+}
+
+.sidebar a:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #FFFFFF;
+}
+
+.sidebar a.activo {
+    background: var(--tutor-verde);
+    color: #FFFFFF;
+}
+
+.menu-deshabilitado {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.sidebar a.salir {
+    margin-top: 25px;
+    color: #FFB7B7;
+}
+
+.sidebar a.salir:hover {
+    background: rgba(255, 100, 100, 0.15);
+}
+
+/* ============================================================
+   CONTENIDO PRINCIPAL
+   ============================================================ */
+
+.contenido {
+    margin-left: 260px;
+    padding: 35px 40px;
+    min-height: 100vh;
+}
+
+/* ============================================================
+   ENCABEZADO
+   ============================================================ */
+
+.barra-superior {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.titulo-pagina {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--tutor-oscuro);
+    margin-bottom: 6px;
+}
+
+.subtitulo {
+    font-size: 14px;
+    color: #718096;
+    margin: 0;
+}
+
+.perfil {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.avatar {
+    width: 43px;
+    height: 43px;
+    border-radius: 50%;
+    background: var(--tutor-verde);
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 19px;
+}
+
+.perfil strong {
+    font-size: 14px;
+}
+
+/* ============================================================
+   BIENVENIDA
+   ============================================================ */
+
+.bienvenida {
+    background: linear-gradient(120deg, #176B52, #102B3F);
+    color: #FFFFFF;
+    border-radius: 18px;
+    padding: 35px;
+    margin-bottom: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    overflow: hidden;
+}
+
+.bienvenida h2 {
+    font-size: 25px;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.bienvenida p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.7;
+    max-width: 650px;
+    color: #E1F4ED;
+}
+
+.bienvenida-icono {
+    font-size: 90px;
+    opacity: 0.2;
+}
+
+/* ============================================================
+   TARJETAS DE ACCIÓN
+   ============================================================ */
+
+.seccion-titulo {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--tutor-oscuro);
+    margin-bottom: 20px;
+}
+
+.tarjeta-accion {
+    background: #FFFFFF;
+    border-radius: 16px;
+    padding: 28px;
+    height: 100%;
+    box-shadow: 0 5px 20px rgba(16, 43, 63, 0.06);
+    border: 1px solid #E8EEF2;
+    display: flex;
+    flex-direction: column;
+    transition: 0.2s;
+}
+
+.tarjeta-accion:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(16, 43, 63, 0.1);
+}
+
+.icono-accion {
+    width: 52px;
+    height: 52px;
+    border-radius: 13px;
+    background: #E4F6EF;
+    color: var(--tutor-verde);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 25px;
+    margin-bottom: 20px;
+}
+
+.tarjeta-accion h5 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--tutor-oscuro);
+    margin-bottom: 12px;
+}
+
+.tarjeta-accion p {
+    font-size: 14px;
+    color: #718096;
+    line-height: 1.7;
+    margin-bottom: 24px;
+    flex-grow: 1;
+}
+
+.boton-accion {
+    display: inline-block;
+    align-self: flex-start;
+    padding: 11px 22px;
+    background: var(--tutor-verde);
+    color: #FFFFFF;
+    border: none;
+    border-radius: 9px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.boton-accion:hover {
+    background: #10523F;
+    color: #FFFFFF;
+}
+
+.boton-accion:disabled {
+    background: #A8B8B5;
+    cursor: not-allowed;
+}
+
+/* ============================================================
+   DISEÑO RESPONSIVO
+   ============================================================ */
+
+@media (max-width: 900px) {
+
+    .sidebar {
+        width: 220px;
+    }
+
+    .contenido {
+        margin-left: 220px;
+        padding: 25px;
+    }
+
+    .barra-superior {
+        align-items: flex-start;
+    }
+
+    .bienvenida-icono {
+        font-size: 65px;
+    }
+}
+
+@media (max-width: 650px) {
+
+    .sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+        padding: 15px;
+    }
+
+    .logo {
+        padding-bottom: 15px;
+    }
+
+    .contenido {
+        margin-left: 0;
+        padding: 20px 15px;
+    }
+
+    .barra-superior {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .bienvenida {
+        padding: 25px;
+    }
+
+    .bienvenida h2 {
+        font-size: 21px;
+    }
+
+    .bienvenida-icono {
+        display: none;
+    }
+
+    .tarjeta-accion {
+        padding: 22px;
+    }
+}
