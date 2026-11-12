@@ -173,6 +173,7 @@ $stmt = $conexion->prepare(
      FROM disponibilidades d
      INNER JOIN cursos c ON c.id = d.curso_id
      WHERE d.tutor_id = :tutor
+       AND d.estado <> 'CANCELADO'
      ORDER BY d.fecha DESC, d.hora_inicio"
 );
 $stmt->execute(["tutor" => $tutorId]);

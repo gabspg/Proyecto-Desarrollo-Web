@@ -73,6 +73,7 @@ $stmt = $conexion->prepare(
      INNER JOIN disponibilidades d ON d.id = s.disponibilidad_id
      INNER JOIN cursos c ON c.id = d.curso_id
      WHERE d.tutor_id = :tutor
+       AND d.estado <> 'CANCELADO'
      ORDER BY
          CASE WHEN s.estado = 'PENDIENTE' THEN 0 ELSE 1 END,
          s.created_at DESC"
