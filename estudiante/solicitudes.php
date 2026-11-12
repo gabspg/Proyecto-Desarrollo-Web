@@ -78,6 +78,7 @@ $stmt = $conexion->prepare("
         s.motivo,
         s.estado,
         s.created_at,
+        a.recomendaciones,
         d.fecha,
         d.hora_inicio,
         d.hora_fin,
@@ -96,6 +97,8 @@ $stmt = $conexion->prepare("
         ON c.id = d.curso_id
     JOIN usuarios t
         ON t.id = d.tutor_id
+    LEFT JOIN atenciones a
+        ON a.solicitud_id = s.id
     WHERE s.estudiante_id = ?
     ORDER BY s.created_at DESC
 ");
@@ -599,6 +602,13 @@ $noLeidas = (int)$stmt->fetchColumn();
 
                             </div>
 
+                            <?php if (trim((string)($s['recomendaciones'] ?? '')) !== ''): ?>
+                                <div class="alert alert-info mt-2 mb-0 py-2">
+                                    <strong>Recomendaciones del tutor:</strong>
+                                    <div><?= nl2br(e($s['recomendaciones'])) ?></div>
+                                </div>
+                            <?php endif; ?>
+
                         <?php endif; ?>
 
                         <!-- HORARIO CANCELADO -->
@@ -659,6 +669,22 @@ $noLeidas = (int)$stmt->fetchColumn();
 
                         <?php endif; ?>
 
+                        <form
+                            method="post"
+                            action="../apis/estudiante_solicitudes.php"
+                            class="mt-2"
+                            data-confirm="¿Eliminar permanentemente esta solicitud y sus datos relacionados? Esta acción no se puede deshacer."
+                        >
+                            <input type="hidden" name="vista" value="<?= e($vista) ?>">
+                            <input type="hidden" name="token" value="<?= e($token) ?>">
+                            <input type="hidden" name="accion" value="eliminar">
+                            <input type="hidden" name="solicitud_id" value="<?= (int)$s['id'] ?>">
+                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                <i class="bi bi-trash"></i>
+                                Eliminar solicitud
+                            </button>
+                        </form>
+
                     </div>
 
                 </div>
@@ -693,6 +719,7 @@ $noLeidas = (int)$stmt->fetchColumn();
 
 </main>
 
+<script src="../js/form-confirm.js" defer></script>
 <script src="../js/form-confirm.js" defer></script>
 </body>
 </html>

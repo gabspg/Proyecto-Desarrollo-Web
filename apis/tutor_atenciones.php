@@ -27,7 +27,134 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $accion = $_POST["accion"] ?? "";
 
-    if (in_array($accion, ["registrar", "editar"], true)) {
+    if ($accion === "eliminar") {
+        $atencionId = filter_input(
+            INPUT_POST,
+            "atencion_id",
+            FILTER_VALIDATE_INT
+        );
+
+        if (!$atencionId) {
+            $error = "El registro de atención seleccionado no es válido.";
+        } else {
+            try {
+                $conexion->beginTransaction();
+
+                $stmt = $conexion->prepare(
+                    "SELECT
+                        a.id,
+                        a.solicitud_id,
+                        s.estado AS estado_solicitud,
+                        d.estado AS estado_horario
+                     FROM atenciones a
+                     INNER JOIN solicitudes_tutoria s
+                        ON s.id = a.solicitud_id
+                     INNER JOIN disponibilidades d
+                        ON d.id = s.disponibilidad_id
+                     WHERE a.id = :atencion
+                       AND a.registrado_por = :tutor_registro
+                       AND d.tutor_id = :tutor_propietario
+                     FOR UPDATE"
+                );
+                $stmt->execute([
+                    "atencion" => $atencionId,
+                    "tutor_registro" => $tutorId,
+                    "tutor_propietario" => $tutorId
+                ]);
+                $atencion = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$atencion) {
+                    throw new RuntimeException(
+                        "No se encontró un registro de atención que puedas eliminar."
+                    );
+                }
+
+                if ($atencion["estado_solicitud"] !== "ATENDIDA") {
+                    throw new RuntimeException(
+                        "La solicitud ya no tiene el estado esperado para eliminar su atención."
+                    );
+                }
+
+                $nuevoEstado = $atencion["estado_horario"] === "CANCELADO"
+                    ? "CANCELADA"
+                    : "ACEPTADA";
+
+                $stmt = $conexion->prepare(
+                    "DELETE FROM atenciones
+                     WHERE id = :atencion
+                       AND registrado_por = :tutor"
+                );
+                $stmt->execute([
+                    "atencion" => $atencionId,
+                    "tutor" => $tutorId
+                ]);
+
+                if ($stmt->rowCount() !== 1) {
+                    throw new RuntimeException(
+                        "No se pudo eliminar el registro de atención."
+                    );
+                }
+
+                $stmt = $conexion->prepare(
+                    "UPDATE solicitudes_tutoria
+                     SET estado = :estado
+                     WHERE id = :solicitud
+                       AND estado = 'ATENDIDA'"
+                );
+                $stmt->execute([
+                    "estado" => $nuevoEstado,
+                    "solicitud" => $atencion["solicitud_id"]
+                ]);
+
+                if ($stmt->rowCount() !== 1) {
+                    throw new RuntimeException(
+                        "No se pudo actualizar el estado de la solicitud."
+                    );
+                }
+
+                $stmt = $conexion->prepare(
+                    "INSERT INTO historial_estados
+                    (
+                        solicitud_id,
+                        estado_anterior,
+                        estado_nuevo,
+                        cambiado_por,
+                        comentario
+                    )
+                    VALUES
+                    (
+                        :solicitud,
+                        'ATENDIDA',
+                        :estado,
+                        :tutor,
+                        'El tutor eliminó el registro de atención.'
+                    )"
+                );
+                $stmt->execute([
+                    "solicitud" => $atencion["solicitud_id"],
+                    "estado" => $nuevoEstado,
+                    "tutor" => $tutorId
+                ]);
+
+                $conexion->commit();
+                $_SESSION["mensaje_atenciones"] =
+                    "Registro de atención eliminado correctamente.";
+                header("Location: ../tutor/atenciones.php");
+                exit;
+            } catch (RuntimeException $e) {
+                if ($conexion->inTransaction()) {
+                    $conexion->rollBack();
+                }
+                $error = $e->getMessage();
+            } catch (PDOException $e) {
+                if ($conexion->inTransaction()) {
+                    $conexion->rollBack();
+                }
+                error_log($e->getMessage());
+                $error = "No se pudo eliminar el registro de atención.";
+            }
+        }
+    } elseif (in_array($accion, ["registrar", "editar"], true)) {
 
         $seccion = $accion;
 
@@ -66,7 +193,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     s.id,
                     s.estado,
                     d.fecha,
-                    d.hora_fin
+                    d.hora_fin,
+                    d.estado AS estado_horario
                  FROM solicitudes_tutoria s
                  INNER JOIN disponibilidades d
                     ON d.id = s.disponibilidad_id

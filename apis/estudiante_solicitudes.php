@@ -20,9 +20,108 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         FILTER_VALIDATE_INT
     );
 
-    if (!$sid || ($_POST['accion'] ?? '') !== 'cancelar') {
+    $accion = $_POST['accion'] ?? '';
+
+    if (!$sid || !in_array($accion, ['cancelar', 'eliminar'], true)) {
 
         $error = 'Acción inválida.';
+
+    } elseif ($accion === 'eliminar') {
+        try {
+            $conexion->beginTransaction();
+
+            $stmt = $conexion->prepare("
+                SELECT
+                    s.disponibilidad_id,
+                    s.estado AS estado_solicitud,
+                    d.estado AS estado_disponibilidad,
+                    d.cupo_actual,
+                    d.cupo_maximo
+                FROM solicitudes_tutoria s
+                INNER JOIN disponibilidades d
+                    ON d.id = s.disponibilidad_id
+                WHERE s.id = ?
+                  AND s.estudiante_id = ?
+                FOR UPDATE
+            ");
+            $stmt->execute([$sid, $id]);
+            $solicitud = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$solicitud) {
+                throw new RuntimeException(
+                    'No se encontró una solicitud que puedas eliminar.'
+                );
+            }
+
+            $stmt = $conexion->prepare("
+                DELETE FROM atenciones
+                WHERE solicitud_id = ?
+            ");
+            $stmt->execute([$sid]);
+
+            $stmt = $conexion->prepare("
+                DELETE FROM historial_estados
+                WHERE solicitud_id = ?
+            ");
+            $stmt->execute([$sid]);
+
+            $stmt = $conexion->prepare("
+                DELETE FROM notificaciones
+                WHERE solicitud_id = ?
+            ");
+            $stmt->execute([$sid]);
+
+            $stmt = $conexion->prepare("
+                DELETE FROM solicitudes_tutoria
+                WHERE id = ?
+                  AND estudiante_id = ?
+            ");
+            $stmt->execute([$sid, $id]);
+
+            if ($stmt->rowCount() !== 1) {
+                throw new RuntimeException(
+                    'No se pudo eliminar la solicitud.'
+                );
+            }
+
+            if (
+                $solicitud['estado_solicitud'] === 'ACEPTADA' &&
+                $solicitud['estado_disponibilidad'] !== 'CANCELADO'
+            ) {
+                $stmt = $conexion->prepare("
+                    UPDATE disponibilidades
+                    SET
+                        cupo_actual = GREATEST(cupo_actual - 1, 0),
+                        estado = CASE
+                            WHEN cupo_actual - 1 < cupo_maximo
+                            THEN 'DISPONIBLE'
+                            ELSE 'AGOTADO'
+                        END
+                    WHERE id = ?
+                      AND estado <> 'CANCELADO'
+                ");
+                $stmt->execute([$solicitud['disponibilidad_id']]);
+            }
+
+            $conexion->commit();
+            $_SESSION['flash_sol_est'] = 'Solicitud eliminada correctamente.';
+            header(
+                'Location: ../estudiante/solicitudes.php?vista=' .
+                urlencode($vista)
+            );
+            exit;
+        } catch (RuntimeException $ex) {
+            if ($conexion->inTransaction()) {
+                $conexion->rollBack();
+            }
+            $error = $ex->getMessage();
+        } catch (PDOException $ex) {
+            if ($conexion->inTransaction()) {
+                $conexion->rollBack();
+            }
+            error_log($ex->getMessage());
+            $error = 'No fue posible eliminar la solicitud.';
+        }
 
     } else {
 

@@ -705,6 +705,21 @@ if (isset($_SESSION["mensaje_atenciones"])) {
 
                                         </a>
 
+                                        <form
+                                            method="POST"
+                                            action="../apis/tutor_atenciones.php"
+                                            class="d-inline"
+                                            data-confirm="¿Eliminar permanentemente este registro de atención?"
+                                        >
+                                            <input type="hidden" name="token" value="<?= escapar($token) ?>">
+                                            <input type="hidden" name="accion" value="eliminar">
+                                            <input type="hidden" name="atencion_id" value="<?= (int)$atencion["id"] ?>">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                <i class="bi bi-trash"></i>
+                                                Eliminar
+                                            </button>
+                                        </form>
+
                                     </td>
 
                                 </tr>
@@ -752,5 +767,6 @@ if (isset($_SESSION["mensaje_atenciones"])) {
 
 </main>
 
+<script src="../js/form-confirm.js" defer></script>
 </body>
 </html>
