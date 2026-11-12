@@ -107,6 +107,14 @@ body {
     min-width: 180px;
 }
 
+.perfil-eliminar .tl-box {
+    border: 1px solid #f1c5c5;
+}
+
+.perfil-eliminar p {
+    max-width: 720px;
+}
+
 dialog.modal[open] {
     display: block;
     border: 0;

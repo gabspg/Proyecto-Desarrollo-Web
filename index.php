@@ -37,6 +37,7 @@ if (isset($_SESSION['usuario_id'])) {
    ============================================================ */
 
 $error = $_GET['error'] ?? '';
+$perfilEliminado = ($_GET['perfil'] ?? '') === 'eliminado';
 
 ?>
 
@@ -129,6 +130,12 @@ $error = $_GET['error'] ?? '';
                 Debes completar todos los campos.
             </div>
 
+        <?php endif; ?>
+
+        <?php if ($perfilEliminado): ?>
+            <div class="alert alert-success login-error" role="status">
+                Tu perfil y sus datos relacionados se eliminaron correctamente.
+            </div>
         <?php endif; ?>
 
         <!-- FORMULARIO -->
