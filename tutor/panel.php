@@ -41,6 +41,12 @@ if ($tutorId <= 0) {
     exit("No se pudo identificar al tutor.");
 }
 
+if (empty($_SESSION["csrf_eliminar_perfil"])) {
+    $_SESSION["csrf_eliminar_perfil"] = bin2hex(random_bytes(32));
+}
+$errorEliminarPerfil = (string)($_SESSION["error_eliminar_perfil"] ?? "");
+unset($_SESSION["error_eliminar_perfil"]);
+
 $inicial = function_exists("mb_substr")
     ? mb_substr($nombre, 0, 1, "UTF-8")
     : substr($nombre, 0, 1);
@@ -1183,7 +1189,49 @@ $solicitudesRecientes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     </section>
 
+    <section class="perfil-eliminar mt-4" aria-labelledby="titulo-eliminar-perfil">
+        <div class="tl-box">
+            <h4 id="titulo-eliminar-perfil" class="text-danger">
+                <i class="bi bi-person-x"></i>
+                Eliminar mi perfil
+            </h4>
+            <p>
+                Esta acción es permanente y eliminará tu cuenta y los datos relacionados.
+                Para continuar, confirma tu contraseña actual.
+            </p>
+
+            <?php if ($errorEliminarPerfil !== ""): ?>
+                <div class="alert alert-danger" role="alert"><?= escapar($errorEliminarPerfil) ?></div>
+            <?php endif; ?>
+
+            <form action="../apis/eliminar_perfil.php" method="POST" class="row g-3 align-items-end">
+                <input type="hidden" name="token" value="<?= escapar($_SESSION["csrf_eliminar_perfil"]) ?>">
+                <div class="col-md-8">
+                    <label for="contrasena-eliminar-perfil" class="form-label">Contraseña actual</label>
+                    <input
+                        type="password"
+                        class="form-control"
+                        id="contrasena-eliminar-perfil"
+                        name="contrasena_actual"
+                        autocomplete="current-password"
+                        required
+                    >
+                </div>
+                <div class="col-md-4">
+                    <button
+                        type="submit"
+                        class="btn btn-danger w-100"
+                        data-confirm="¿Eliminar permanentemente tu perfil? Esta acción no se puede deshacer."
+                    >
+                        Eliminar perfil
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
 </main>
 
+<script src="../js/form-confirm.js" defer></script>
 </body>
 </html>

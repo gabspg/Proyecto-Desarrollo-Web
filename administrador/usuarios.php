@@ -700,78 +700,67 @@ foreach ($usuarios as $usuario) {
                                                 Sin acciones
                                             </span>
 
-
-                                        <?php elseif ($usuario["estado"] === "PENDIENTE"): ?>
-
-                                            <a
-                                                href="usuarios.php?seccion=tutores"
-                                                class="btn btn-warning btn-sm"
-                                            >
-
-                                                <i class="bi bi-eye"></i>
-
-                                                Revisar
-
-                                            </a>
-
-
                                         <?php else: ?>
 
-                                            <form
-                                                action="../apis/administrador_usuarios.php"
-                                                method="POST"
-                                            >
-
-                                                <input
-                                                    type="hidden"
-                                                    name="usuario_id"
-                                                    value="<?= (int)$usuario["id"] ?>"
-                                                >
-
-                                                <input
-                                                    type="hidden"
-                                                    name="token"
-                                                    value="<?= htmlspecialchars(
-                                                        $_SESSION["token_usuarios"]
-                                                    ) ?>"
-                                                >
-
-
-                                                <?php if ($usuario["estado"] === "ACTIVO"): ?>
-
-                                                    <button
-                                                        type="submit"
-                                                        name="accion"
-                                                        value="desactivar"
-                                                        class="btn btn-danger btn-sm"
-                                                        data-confirm="¿Deseas desactivar este usuario?"
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <?php if ($usuario["estado"] === "PENDIENTE"): ?>
+                                                    <a
+                                                        href="usuarios.php?seccion=tutores"
+                                                        class="btn btn-warning btn-sm"
                                                     >
-
-                                                        <i class="bi bi-person-x"></i>
-
-                                                        Desactivar
-
-                                                    </button>
-
-
+                                                        <i class="bi bi-eye"></i>
+                                                        Revisar
+                                                    </a>
                                                 <?php else: ?>
-
-                                                    <button
-                                                        type="submit"
-                                                        name="accion"
-                                                        value="activar"
-                                                        class="btn btn-success btn-sm"
+                                                    <form
+                                                        action="../apis/administrador_usuarios.php"
+                                                        method="POST"
                                                     >
-
-                                                        <i class="bi bi-person-check"></i>
-
-                                                        Activar
-
-                                                    </button>
-
+                                                        <input type="hidden" name="usuario_id" value="<?= (int)$usuario["id"] ?>">
+                                                        <input type="hidden" name="token" value="<?= htmlspecialchars($_SESSION["token_usuarios"], ENT_QUOTES, "UTF-8") ?>">
+                                                        <?php if ($usuario["estado"] === "ACTIVO"): ?>
+                                                            <button
+                                                                type="submit"
+                                                                name="accion"
+                                                                value="desactivar"
+                                                                class="btn btn-danger btn-sm"
+                                                                data-confirm="¿Deseas desactivar este usuario?"
+                                                            >
+                                                                <i class="bi bi-person-x"></i>
+                                                                Desactivar
+                                                            </button>
+                                                        <?php else: ?>
+                                                            <button
+                                                                type="submit"
+                                                                name="accion"
+                                                                value="activar"
+                                                                class="btn btn-success btn-sm"
+                                                            >
+                                                                <i class="bi bi-person-check"></i>
+                                                                Activar
+                                                            </button>
+                                                        <?php endif; ?>
+                                                    </form>
                                                 <?php endif; ?>
 
-                                            </form>
+                                                <form
+                                                    action="../apis/administrador_usuarios.php"
+                                                    method="POST"
+                                                >
+                                                    <input type="hidden" name="usuario_id" value="<?= (int)$usuario["id"] ?>">
+                                                    <input type="hidden" name="token" value="<?= htmlspecialchars($_SESSION["token_usuarios"], ENT_QUOTES, "UTF-8") ?>">
+                                                    <button
+                                                        type="submit"
+                                                        name="accion"
+                                                        value="eliminar"
+                                                        class="btn btn-outline-danger btn-sm"
+                                                        data-confirm="¿Eliminar permanentemente este perfil y todos sus datos relacionados? Esta acción no se puede deshacer."
+                                                    >
+                                                        <i class="bi bi-trash3"></i>
+                                                        Eliminar
+                                                    </button>
+                                                </form>
+                                            </div>
 
                                         <?php endif; ?>
 
