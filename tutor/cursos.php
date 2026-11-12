@@ -54,6 +54,8 @@ if (!in_array($seccion, ["lista", "registrar", "editar"], true)) {
 }
 
 $error = "";
+$error = (string)($_SESSION["error_cursos_tutor"] ?? $error);
+unset($_SESSION["error_cursos_tutor"]);
 $mensaje = "";
 
 $stmt = $conexion->prepare(
@@ -85,402 +87,7 @@ $cupoMaximo = 1;
    PROCESAR FORMULARIOS
    ========================================================== */
 
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $modulo = $_POST["modulo"] ?? "";
-    $accion = $_POST["accion"] ?? "";
-
-    if (!in_array($modulo, ["cursos", "horarios"], true)) {
-        exit("Módulo inválido.");
-    }
-
-    $vista = $modulo;
-
-    $tokenRecibido = $_POST["token"] ?? "";
-    $tokenCorrecto = $modulo === "cursos" ? $tokenCursos : $tokenHorarios;
-
-    if (!is_string($tokenRecibido) ||
-        !hash_equals($tokenCorrecto, $tokenRecibido)) {
-        exit("Solicitud no válida.");
-    }
-
-    /* CURSOS */
-
-    if ($modulo === "cursos" && in_array($accion, ["agregar", "quitar"], true)) {
-
-        $cursoId = filter_input(INPUT_POST, "curso_id", FILTER_VALIDATE_INT);
-
-        if (!$cursoId) {
-            $error = "Selecciona un curso válido.";
-        }
-
-        if ($error === "" && $accion === "agregar") {
-
-            $stmt = $conexion->prepare(
-                "SELECT id FROM cursos
-                 WHERE id = :curso
-                   AND carrera_id = :carrera
-                   AND estado = 'ACTIVO'"
-            );
-            $stmt->execute([
-                "curso" => $cursoId,
-                "carrera" => $carreraId
-            ]);
-
-            if (!$stmt->fetch()) {
-                $error = "El curso no está disponible para tu carrera.";
-            }
-
-            if ($error === "") {
-                $stmt = $conexion->prepare(
-                    "SELECT id FROM tutor_cursos
-                     WHERE tutor_id = :tutor AND curso_id = :curso"
-                );
-                $stmt->execute([
-                    "tutor" => $tutorId,
-                    "curso" => $cursoId
-                ]);
-
-                if ($stmt->fetch()) {
-                    $error = "Ya tienes asignado este curso.";
-                }
-            }
-        }
-
-        if ($error === "") {
-            try {
-
-                if ($accion === "agregar") {
-                    $stmt = $conexion->prepare(
-                        "INSERT INTO tutor_cursos (tutor_id, curso_id)
-                         VALUES (:tutor, :curso)"
-                    );
-                } else {
-                    $stmt = $conexion->prepare(
-                        "DELETE FROM tutor_cursos
-                         WHERE tutor_id = :tutor AND curso_id = :curso"
-                    );
-                }
-
-                $stmt->execute([
-                    "tutor" => $tutorId,
-                    "curso" => $cursoId
-                ]);
-
-                if ($accion === "quitar" && $stmt->rowCount() === 0) {
-                    $error = "El curso no estaba asignado.";
-                } else {
-                    $_SESSION["mensaje_cursos_tutor"] =
-                        $accion === "agregar"
-                        ? "Curso agregado correctamente."
-                        : "Curso quitado correctamente.";
-
-                    header("Location: cursos.php?vista=cursos");
-                    exit;
-                }
-
-            } catch (PDOException $e) {
-                error_log($e->getMessage());
-                $error = $accion === "agregar"
-                    ? "No se pudo agregar el curso."
-                    : "No puedes quitar un curso con horarios relacionados.";
-            }
-        }
-    }
-
-    /* HORARIOS */
-
-    if ($modulo === "horarios") {
-
-        if (in_array($accion, ["registrar", "editar"], true)) {
-
-            $seccion = $accion;
-            $horarioId = filter_input(INPUT_POST, "horario_id", FILTER_VALIDATE_INT) ?: 0;
-            $tutorCursoId = filter_input(INPUT_POST, "tutor_curso_id", FILTER_VALIDATE_INT) ?: 0;
-
-            $fecha = trim($_POST["fecha"] ?? "");
-            $horaInicio = trim($_POST["hora_inicio"] ?? "");
-            $horaFin = trim($_POST["hora_fin"] ?? "");
-            $modalidad = $_POST["modalidad"] ?? "";
-            $tipoTutoria = $_POST["tipo_tutoria"] ?? "";
-            $lugarLink = trim($_POST["lugar_link"] ?? "");
-            $cupoMaximo = filter_input(INPUT_POST, "cupo_maximo", FILTER_VALIDATE_INT);
-
-            $stmt = $conexion->prepare(
-                "SELECT tc.id, tc.curso_id
-                 FROM tutor_cursos tc
-                 INNER JOIN cursos c ON c.id = tc.curso_id
-                 WHERE tc.id = :id
-                   AND tc.tutor_id = :tutor
-                   AND c.estado = 'ACTIVO'"
-            );
-            $stmt->execute([
-                "id" => $tutorCursoId,
-                "tutor" => $tutorId
-            ]);
-            $cursoAsignado = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$cursoAsignado) {
-                $error = "Selecciona un curso activo que tengas asignado.";
-            }
-
-            if ($error === "" && !esFechaValida($fecha)) {
-                $error = "Selecciona una fecha válida.";
-            }
-
-            if ($error === "" &&
-                (!esHoraValida($horaInicio) || !esHoraValida($horaFin))) {
-                $error = "Selecciona horas válidas.";
-            }
-
-            if ($error === "" && $horaInicio >= $horaFin) {
-                $error = "La hora de inicio debe ser menor que la hora final.";
-            }
-
-            if ($error === "" &&
-                !in_array($modalidad, ["VIRTUAL", "PRESENCIAL"], true)) {
-                $error = "Selecciona una modalidad válida.";
-            }
-
-            if ($error === "" &&
-                !in_array($tipoTutoria, ["INDIVIDUAL", "GRUPAL"], true)) {
-                $error = "Selecciona un tipo de tutoría válido.";
-            }
-
-            if ($error === "" && (!$cupoMaximo || $cupoMaximo < 1)) {
-                $error = "El cupo máximo debe ser mayor que cero.";
-            }
-
-            if ($error === "" &&
-                $tipoTutoria === "INDIVIDUAL" &&
-                $cupoMaximo !== 1) {
-                $error = "Una tutoría individual solo puede tener un cupo.";
-            }
-
-            if ($error === "" && $lugarLink === "") {
-                $error = $modalidad === "VIRTUAL"
-                    ? "Ingresa el enlace de Google Meet."
-                    : "Ingresa el lugar de la tutoría.";
-            }
-
-            if ($error === "" && strlen($lugarLink) > 255) {
-                $error = "El lugar o enlace es demasiado largo.";
-            }
-
-            if ($error === "" &&
-                $modalidad === "VIRTUAL" &&
-                !esMeetValido($lugarLink)) {
-                $error = "Ingresa un enlace válido de Google Meet.";
-            }
-
-            if ($error === "" && $accion === "editar") {
-
-                $stmt = $conexion->prepare(
-                    "SELECT * FROM disponibilidades
-                     WHERE id = :id AND tutor_id = :tutor"
-                );
-                $stmt->execute([
-                    "id" => $horarioId,
-                    "tutor" => $tutorId
-                ]);
-                $existente = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                if (!$existente) {
-                    $error = "No se encontró el horario.";
-                } elseif ($existente["estado"] === "CANCELADO") {
-                    $error = "No puedes editar un horario cancelado.";
-                }
-            }
-
-            if ($error === "" && $accion === "editar") {
-
-                $stmt = $conexion->prepare(
-                    "SELECT COUNT(*) FROM solicitudes_tutoria
-                     WHERE disponibilidad_id = :id
-                       AND estado IN ('PENDIENTE', 'ACEPTADA')"
-                );
-                $stmt->execute(["id" => $horarioId]);
-
-                if ((int)$stmt->fetchColumn() > 0) {
-                    $error = "No puedes editar un horario con solicitudes activas.";
-                }
-            }
-
-            if ($error === "") {
-
-                $stmt = $conexion->prepare(
-                    "SELECT id FROM disponibilidades
-                     WHERE tutor_id = :tutor
-                       AND fecha = :fecha
-                       AND hora_inicio < :fin
-                       AND hora_fin > :inicio
-                       AND estado <> 'CANCELADO'
-                       AND id <> :id
-                     LIMIT 1"
-                );
-                $stmt->execute([
-                    "tutor" => $tutorId,
-                    "fecha" => $fecha,
-                    "fin" => $horaFin,
-                    "inicio" => $horaInicio,
-                    "id" => $horarioId
-                ]);
-
-                if ($stmt->fetch()) {
-                    $error = "Ya tienes una tutoría en esa fecha y horario.";
-                }
-            }
-
-            if ($error === "") {
-                try {
-
-                    $cursoId = (int)$cursoAsignado["curso_id"];
-
-                    if ($accion === "registrar") {
-
-                        $stmt = $conexion->prepare(
-                            "INSERT INTO disponibilidades
-                            (tutor_curso_id, tutor_id, curso_id,
-                             fecha, hora_inicio, hora_fin, modalidad,
-                             tipo_tutoria, lugar_link, cupo_maximo,
-                             cupo_actual, estado)
-                             VALUES
-                            (:tutor_curso, :tutor, :curso,
-                             :fecha, :inicio, :fin, :modalidad,
-                             :tipo, :lugar, :cupo, 0, 'DISPONIBLE')"
-                        );
-                        $stmt->execute([
-                            "tutor_curso" => $tutorCursoId,
-                            "tutor" => $tutorId,
-                            "curso" => $cursoId,
-                            "fecha" => $fecha,
-                            "inicio" => $horaInicio,
-                            "fin" => $horaFin,
-                            "modalidad" => $modalidad,
-                            "tipo" => $tipoTutoria,
-                            "lugar" => $lugarLink,
-                            "cupo" => $cupoMaximo
-                        ]);
-
-                        $_SESSION["mensaje_horarios"] =
-                            "Tutoría registrada correctamente.";
-
-                    } else {
-
-                        $stmt = $conexion->prepare(
-                            "UPDATE disponibilidades
-                             SET tutor_curso_id = :tutor_curso,
-                                 curso_id = :curso,
-                                 fecha = :fecha,
-                                 hora_inicio = :inicio,
-                                 hora_fin = :fin,
-                                 modalidad = :modalidad,
-                                 tipo_tutoria = :tipo,
-                                 lugar_link = :lugar,
-                                 cupo_maximo = :cupo
-                             WHERE id = :id
-                               AND tutor_id = :tutor
-                               AND estado <> 'CANCELADO'"
-                        );
-                        $stmt->execute([
-                            "tutor_curso" => $tutorCursoId,
-                            "curso" => $cursoId,
-                            "fecha" => $fecha,
-                            "inicio" => $horaInicio,
-                            "fin" => $horaFin,
-                            "modalidad" => $modalidad,
-                            "tipo" => $tipoTutoria,
-                            "lugar" => $lugarLink,
-                            "cupo" => $cupoMaximo,
-                            "id" => $horarioId,
-                            "tutor" => $tutorId
-                        ]);
-
-                        $_SESSION["mensaje_horarios"] =
-                            "Tutoría actualizada correctamente.";
-                    }
-
-                    header("Location: cursos.php?vista=horarios");
-                    exit;
-
-                } catch (PDOException $e) {
-                    error_log($e->getMessage());
-                    $error = "No se pudo guardar la tutoría.";
-                }
-            }
-        }
-
-        if ($accion === "cancelar") {
-
-            $horarioId = filter_input(INPUT_POST, "horario_id", FILTER_VALIDATE_INT);
-
-            if (!$horarioId) {
-                $error = "Horario inválido.";
-            } else {
-                try {
-                    $conexion->beginTransaction();
-
-                    $stmt = $conexion->prepare(
-                        "SELECT id, estado FROM disponibilidades
-                         WHERE id = :id AND tutor_id = :tutor
-                         FOR UPDATE"
-                    );
-                    $stmt->execute([
-                        "id" => $horarioId,
-                        "tutor" => $tutorId
-                    ]);
-                    $horario = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                    if (!$horario) {
-                        $error = "No se encontró el horario.";
-                    } elseif ($horario["estado"] === "CANCELADO") {
-                        $error = "Este horario ya está cancelado.";
-                    } else {
-
-                        $stmt = $conexion->prepare(
-                            "SELECT COUNT(*) FROM solicitudes_tutoria
-                             WHERE disponibilidad_id = :id
-                               AND estado IN ('PENDIENTE', 'ACEPTADA')"
-                        );
-                        $stmt->execute(["id" => $horarioId]);
-
-                        if ((int)$stmt->fetchColumn() > 0) {
-                            $error = "No puedes cancelar una tutoría con solicitudes activas.";
-                        } else {
-                            $stmt = $conexion->prepare(
-                                "UPDATE disponibilidades
-                                 SET estado = 'CANCELADO'
-                                 WHERE id = :id AND tutor_id = :tutor"
-                            );
-                            $stmt->execute([
-                                "id" => $horarioId,
-                                "tutor" => $tutorId
-                            ]);
-
-                            $_SESSION["mensaje_horarios"] =
-                                "Tutoría cancelada correctamente.";
-                        }
-                    }
-
-                    if ($error !== "") {
-                        $conexion->rollBack();
-                    } else {
-                        $conexion->commit();
-                        header("Location: cursos.php?vista=horarios");
-                        exit;
-                    }
-
-                } catch (PDOException $e) {
-                    if ($conexion->inTransaction()) {
-                        $conexion->rollBack();
-                    }
-                    error_log($e->getMessage());
-                    $error = "No se pudo cancelar la tutoría.";
-                }
-            }
-        }
-    }
-}
 
 /* ==========================================================
    CARGAR HORARIO PARA EDITAR
@@ -587,8 +194,8 @@ if ($vista === "horarios" && isset($_SESSION["mensaje_horarios"])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cursos y Horarios - TutorLink</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" integrity="sha384-tViUnnbYAV00FLIhhi3v/dWt3Jxw4gZQcNoSCxCIFNJVCx7/D55/wXsrNIRANwdD" crossorigin="anonymous">
     <link rel="stylesheet" href="../estilos/tutor.css">
 </head>
 <body>
@@ -624,9 +231,16 @@ if ($vista === "horarios" && isset($_SESSION["mensaje_horarios"])) {
         <i class="bi bi-clipboard-check-fill"></i> Registro de atenciones
     </a>
 
-    <a href="/tutorias/autenticacion/logout.php" class="salir">
-        <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+    <a href="notificaciones.php">
+        <i class="bi bi-bell-fill"></i> Notificaciones
     </a>
+
+    <form action="../apis/logout.php" method="POST" class="logout-form">
+        <input type="hidden" name="token" value="<?= escapar($_SESSION["csrf_logout"]) ?>">
+        <button type="submit" class="salir">
+            <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+        </button>
+    </form>
 </aside>
 
 <main class="contenido">
@@ -683,7 +297,7 @@ if ($vista === "horarios" && isset($_SESSION["mensaje_horarios"])) {
             <div class="card-body p-4">
                 <p>Selecciona los cursos de tu carrera que deseas impartir.</p>
 
-                <form method="POST" action="cursos.php?vista=cursos">
+                <form method="POST" action="../apis/tutor_cursos.php">
                     <input type="hidden" name="modulo" value="cursos">
                     <input type="hidden" name="token" value="<?= escapar($tokenCursos) ?>">
                     <input type="hidden" name="accion" value="agregar">
@@ -735,8 +349,8 @@ if ($vista === "horarios" && isset($_SESSION["mensaje_horarios"])) {
                                         </span>
                                     </td>
                                     <td>
-                                        <form method="POST" action="cursos.php?vista=cursos"
-                                              onsubmit="return confirm('¿Deseas quitar este curso?')">
+                                        <form method="POST" action="../apis/tutor_cursos.php"
+                                              data-confirm="¿Deseas quitar este curso?">
                                             <input type="hidden" name="modulo" value="cursos">
                                             <input type="hidden" name="token" value="<?= escapar($tokenCursos) ?>">
                                             <input type="hidden" name="accion" value="quitar">
@@ -767,9 +381,6 @@ if ($vista === "horarios" && isset($_SESSION["mensaje_horarios"])) {
         <h4 class="seccion-titulo">Administrar horarios</h4>
 
         <div class="d-flex gap-2 flex-wrap mb-4">
-            <a href="cursos.php?vista=horarios" class="btn btn-primary">
-                <i class="bi bi-list-ul"></i> Consultar horarios
-            </a>
             <a href="cursos.php?vista=horarios&amp;seccion=registrar" class="btn btn-success">
                 <i class="bi bi-plus-circle"></i> Nueva tutoría
             </a>
@@ -783,7 +394,7 @@ if ($vista === "horarios" && isset($_SESSION["mensaje_horarios"])) {
                         <?= $seccion === "editar" ? "Editar tutoría" : "Registrar nueva tutoría" ?>
                     </h4>
 
-                    <form method="POST" action="cursos.php?vista=horarios">
+                    <form method="POST" action="../apis/tutor_cursos.php">
                         <input type="hidden" name="modulo" value="horarios">
                         <input type="hidden" name="token" value="<?= escapar($tokenHorarios) ?>">
                         <input type="hidden" name="accion" value="<?= escapar($seccion) ?>">
@@ -862,8 +473,13 @@ if ($vista === "horarios" && isset($_SESSION["mensaje_horarios"])) {
                         <div class="mb-3">
                             <label for="cupo_maximo" class="form-label">Cupo máximo</label>
                             <input type="number" name="cupo_maximo" id="cupo_maximo"
-                                   class="form-control" min="1"
+                                   class="form-control" min="<?= $tipoTutoria === "GRUPAL" ? 2 : 1 ?>"
                                    value="<?= (int)$cupoMaximo ?>" required>
+                            <div id="ayudaCupo" class="form-text">
+                                <?= $tipoTutoria === "GRUPAL"
+                                    ? "Las tutorías grupales requieren al menos 2 participantes."
+                                    : "Las tutorías individuales tienen un solo cupo." ?>
+                            </div>
                         </div>
 
                         <div class="d-flex gap-2 flex-wrap">
@@ -968,12 +584,23 @@ if ($vista === "horarios" && isset($_SESSION["mensaje_horarios"])) {
                                                     </a>
 
                                                     <form method="POST"
-                                                          action="cursos.php?vista=horarios"
-                                                          onsubmit="return confirm('¿Deseas cancelar esta tutoría?')">
+                                                          action="../apis/tutor_cursos.php"
+                                                          data-confirm="¿Confirmas la cancelación de esta tutoría y el envío del motivo a los estudiantes inscritos?">
                                                         <input type="hidden" name="modulo" value="horarios">
                                                         <input type="hidden" name="token" value="<?= escapar($tokenHorarios) ?>">
                                                         <input type="hidden" name="accion" value="cancelar">
                                                         <input type="hidden" name="horario_id" value="<?= (int)$horario["id"] ?>">
+                                                        <label class="form-label small mb-1" for="motivo-cancelacion-<?= (int)$horario["id"] ?>">
+                                                            Motivo obligatorio
+                                                        </label>
+                                                        <textarea
+                                                            class="form-control form-control-sm mb-2"
+                                                            id="motivo-cancelacion-<?= (int)$horario["id"] ?>"
+                                                            name="motivo_cancelacion"
+                                                            rows="2"
+                                                            maxlength="1000"
+                                                            required
+                                                        ></textarea>
                                                         <button type="submit" class="btn btn-danger btn-sm">
                                                             <i class="bi bi-x-circle"></i> Cancelar
                                                         </button>
@@ -1009,55 +636,8 @@ if ($vista === "horarios" && isset($_SESSION["mensaje_horarios"])) {
 
 </main>
 
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-
-    const modalidad = document.getElementById("modalidad");
-    const etiqueta = document.getElementById("etiquetaLugar");
-    const campo = document.getElementById("lugar_link");
-    const ayuda = document.getElementById("ayudaLugar");
-
-    function actualizarModalidad() {
-        if (!modalidad || !etiqueta || !campo || !ayuda) return;
-
-        if (modalidad.value === "VIRTUAL") {
-            etiqueta.textContent = "Enlace de Google Meet";
-            campo.type = "url";
-            campo.placeholder = "https://meet.google.com/abc-defg-hij";
-            ayuda.textContent = "Crea una reunión en Google Meet y pega aquí el enlace.";
-        } else {
-            etiqueta.textContent = "Lugar de la tutoría";
-            campo.type = "text";
-            campo.placeholder = "Ejemplo: Edificio A, aula 203";
-            ayuda.textContent = "Indica dónde se realizará la tutoría presencial.";
-        }
-    }
-
-    if (modalidad) {
-        modalidad.addEventListener("change", actualizarModalidad);
-        actualizarModalidad();
-    }
-
-    const tipo = document.getElementById("tipo_tutoria");
-    const cupo = document.getElementById("cupo_maximo");
-
-    function actualizarCupos() {
-        if (!tipo || !cupo) return;
-
-        if (tipo.value === "INDIVIDUAL") {
-            cupo.value = 1;
-            cupo.readOnly = true;
-        } else {
-            cupo.readOnly = false;
-        }
-    }
-
-    if (tipo) {
-        tipo.addEventListener("change", actualizarCupos);
-        actualizarCupos();
-    }
-});
-</script>
+<script src="../js/tutor-cursos.js" defer></script>
+<script src="../js/form-confirm.js" defer></script>
 
 </body>
 </html>

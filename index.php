@@ -6,7 +6,11 @@
    DESCRIPCIÓN: Inicio de sesión y acceso al registro
    ============================================================ */
 
-session_start();
+require_once __DIR__ . "/seguridad/sesion.php";
+
+if (empty($_SESSION["csrf_login"])) {
+    $_SESSION["csrf_login"] = bin2hex(random_bytes(32));
+}
 
 /* ============================================================
    1. VERIFICAR SI EL USUARIO YA INICIÓ SESIÓN
@@ -15,9 +19,9 @@ session_start();
 if (isset($_SESSION['usuario_id'])) {
 
     $rutas = [
-        'ADMIN' => '/tutorias/administrador/panel.php',
-        'TUTOR' => '/tutorias/tutor/panel.php',
-        'ESTUDIANTE' => '/tutorias/estudiante/panel.php'
+        'ADMIN' => APP_BASE_URL . '/administrador/panel.php',
+        'TUTOR' => APP_BASE_URL . '/tutor/panel.php',
+        'ESTUDIANTE' => APP_BASE_URL . '/estudiante/panel.php'
     ];
 
     $rol = $_SESSION['rol'] ?? '';
@@ -49,22 +53,27 @@ $error = $_GET['error'] ?? '';
     >
 
     <title>Iniciar sesión - TutorLink</title>
+    <link rel="icon" type="image/png" href="img/favicon.png">
 
     <!-- BOOTSTRAP -->
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+        crossorigin="anonymous"
     >
 
     <!-- ICONOS -->
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
         rel="stylesheet"
+        integrity="sha384-tViUnnbYAV00FLIhhi3v/dWt3Jxw4gZQcNoSCxCIFNJVCx7/D55/wXsrNIRANwdD"
+        crossorigin="anonymous"
     >
 
     <!-- CSS DEL LOGIN -->
     <link
-        href="/tutorias/estilos/login.css?v=6"
+        href="<?= APP_BASE_URL ?>/estilos/login.css?v=6"
         rel="stylesheet"
     >
 
@@ -95,6 +104,7 @@ $error = $_GET['error'] ?? '';
             </div>
 
             <h2>Iniciar sesión</h2>
+            
 
             <p>
                 Bienvenido a TutorLink
@@ -124,10 +134,16 @@ $error = $_GET['error'] ?? '';
         <!-- FORMULARIO -->
 
         <form
-            action="/tutorias/autenticacion/login.php"
+            action="<?= APP_BASE_URL ?>/apis/login.php"
             method="POST"
             class="login-form"
         >
+
+            <input
+                type="hidden"
+                name="token"
+                value="<?php echo htmlspecialchars($_SESSION["csrf_login"], ENT_QUOTES, "UTF-8"); ?>"
+            >
 
             <!-- USUARIO -->
 
@@ -169,16 +185,6 @@ $error = $_GET['error'] ?? '';
 
             </div>
 
-            <!-- RECUPERAR CONTRASEÑA -->
-
-            <div class="login-recuperar">
-
-                <a href="/tutorias/autenticacion/recuperar_contrasena.php">
-                    ¿Olvidaste tu contraseña?
-                </a>
-
-            </div>
-
             <!-- BOTÓN INICIAR SESIÓN -->
 
             <button
@@ -203,7 +209,7 @@ $error = $_GET['error'] ?? '';
             </p>
 
             <a
-                href="/tutorias/autenticacion/registro.php"
+                href="<?= APP_BASE_URL ?>/autenticacion/registro.php"
                 class="crear-cuenta-boton"
             >
 

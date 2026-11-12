@@ -113,6 +113,8 @@ $totalPendientes = (int) $consultaPendientes->fetchColumn();
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+        crossorigin="anonymous"
     >
 
 
@@ -123,6 +125,8 @@ $totalPendientes = (int) $consultaPendientes->fetchColumn();
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
         rel="stylesheet"
+        integrity="sha384-tViUnnbYAV00FLIhhi3v/dWt3Jxw4gZQcNoSCxCIFNJVCx7/D55/wXsrNIRANwdD"
+        crossorigin="anonymous"
     >
 
 
@@ -221,13 +225,13 @@ $totalPendientes = (int) $consultaPendientes->fetchColumn();
 
     <!-- CERRAR SESIÓN -->
 
-    <a href="../autenticacion/logout.php" class="salir">
-
-        <i class="bi bi-box-arrow-right"></i>
-
-        Cerrar sesión
-
-    </a>
+    <form action="../apis/logout.php" method="POST" class="logout-form">
+        <input type="hidden" name="token" value="<?= htmlspecialchars($_SESSION["csrf_logout"], ENT_QUOTES, "UTF-8") ?>">
+        <button type="submit" class="salir">
+            <i class="bi bi-box-arrow-right"></i>
+            Cerrar sesión
+        </button>
+    </form>
 
 </aside>
 

@@ -34,6 +34,8 @@ if (empty($_SESSION["token_usuarios"])) {
 
 $mensaje = "";
 $error = "";
+$error = (string)($_SESSION["error_usuarios"] ?? $error);
+unset($_SESSION["error_usuarios"]);
 
 
 /* ============================================================
@@ -51,120 +53,7 @@ if (!in_array($seccion, ["usuarios", "tutores"], true)) {
    4. PROCESAR ACCIONES
    ============================================================ */
 
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $accion = $_POST["accion"] ?? "";
-    $token = $_POST["token"] ?? "";
-    $tokenSesion = $_SESSION["token_usuarios"];
-
-    // Validar token de seguridad
-    if (
-        !is_string($token) ||
-        !hash_equals($tokenSesion, $token)
-    ) {
-        exit("Solicitud no válida.");
-    }
-
-    // Validar ID del usuario
-    $usuarioId = filter_input(
-        INPUT_POST,
-        "usuario_id",
-        FILTER_VALIDATE_INT
-    );
-
-    if (!$usuarioId) {
-        exit("Usuario no válido.");
-    }
-
-
-    /* ========================================================
-       5. APROBAR O RECHAZAR TUTORES
-       ======================================================== */
-
-    if ($accion === "aprobar" || $accion === "rechazar") {
-
-        $nuevoEstado = "ACTIVO";
-
-        if ($accion === "rechazar") {
-            $nuevoEstado = "INACTIVO";
-        }
-
-        $consulta = $conexion->prepare(
-            "UPDATE usuarios
-             INNER JOIN roles
-                ON usuarios.rol_id = roles.id
-             SET usuarios.estado = :estado
-             WHERE usuarios.id = :usuario_id
-             AND roles.nombre = 'TUTOR'
-             AND usuarios.estado = 'PENDIENTE'"
-        );
-
-        $consulta->execute([
-            "estado" => $nuevoEstado,
-            "usuario_id" => $usuarioId
-        ]);
-
-        if ($consulta->rowCount() === 0) {
-            $error = "No se encontró un tutor pendiente.";
-        } else {
-            $mensaje = "Estado del tutor actualizado correctamente.";
-        }
-    }
-
-
-    /* ========================================================
-       6. ACTIVAR O DESACTIVAR USUARIOS
-       ======================================================== */
-
-    if ($accion === "activar" || $accion === "desactivar") {
-
-        $nuevoEstado = "ACTIVO";
-
-        if ($accion === "desactivar") {
-            $nuevoEstado = "INACTIVO";
-        }
-
-        $consulta = $conexion->prepare(
-            "UPDATE usuarios
-             INNER JOIN roles
-                ON usuarios.rol_id = roles.id
-             SET usuarios.estado = :estado
-             WHERE usuarios.id = :usuario_id
-             AND roles.nombre IN ('ESTUDIANTE', 'TUTOR')
-             AND usuarios.estado IN ('ACTIVO', 'INACTIVO')"
-        );
-
-        $consulta->execute([
-            "estado" => $nuevoEstado,
-            "usuario_id" => $usuarioId
-        ]);
-
-        if ($consulta->rowCount() === 0) {
-            $error = "No se pudo cambiar el estado del usuario.";
-        } else {
-            $mensaje = "Estado del usuario actualizado correctamente.";
-        }
-    }
-
-
-    /* ========================================================
-       7. REDIRECCIÓN DESPUÉS DE GUARDAR
-       ======================================================== */
-
-    if ($mensaje !== "") {
-
-        $_SESSION["mensaje_usuarios"] = $mensaje;
-
-        $destino = "usuarios";
-
-        if ($accion === "aprobar" || $accion === "rechazar") {
-            $destino = "tutores";
-        }
-
-        header("Location: usuarios.php?seccion=" . $destino);
-        exit;
-    }
-}
 
 
 /* ============================================================
@@ -252,6 +141,8 @@ foreach ($usuarios as $usuario) {
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+        crossorigin="anonymous"
     >
 
 
@@ -262,6 +153,8 @@ foreach ($usuarios as $usuario) {
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
         rel="stylesheet"
+        integrity="sha384-tViUnnbYAV00FLIhhi3v/dWt3Jxw4gZQcNoSCxCIFNJVCx7/D55/wXsrNIRANwdD"
+        crossorigin="anonymous"
     >
 
 
@@ -270,7 +163,7 @@ foreach ($usuarios as $usuario) {
          ======================================================== -->
 
     <link
-        href="/tutorias/estilos/administrador.css?v=2"
+        href="../estilos/administrador.css?v=2"
         rel="stylesheet"
     >
 
@@ -344,10 +237,13 @@ foreach ($usuarios as $usuario) {
 
     <!-- CERRAR SESIÓN -->
 
-    <a href="../logout.php" class="salir">
+    <form action="../apis/logout.php" method="POST" class="logout-form">
+        <input type="hidden" name="token" value="<?= htmlspecialchars($_SESSION["csrf_logout"], ENT_QUOTES, "UTF-8") ?>">
+        <button type="submit" class="salir">
         <i class="bi bi-box-arrow-right"></i>
         Cerrar sesión
-    </a>
+        </button>
+    </form>
 
 </aside>
 
@@ -604,7 +500,7 @@ foreach ($usuarios as $usuario) {
                                     <td>
 
                                         <form
-                                            action="usuarios.php?seccion=tutores"
+                                            action="../apis/administrador_usuarios.php"
                                             method="POST"
                                             class="d-inline"
                                         >
@@ -647,7 +543,7 @@ foreach ($usuarios as $usuario) {
                                                 name="accion"
                                                 value="rechazar"
                                                 class="btn btn-danger btn-sm"
-                                                onclick="return confirm('¿Deseas rechazar esta solicitud?')"
+                                                data-confirm="¿Deseas rechazar esta solicitud?"
                                             >
 
                                                 <i class="bi bi-x-lg"></i>
@@ -822,7 +718,7 @@ foreach ($usuarios as $usuario) {
                                         <?php else: ?>
 
                                             <form
-                                                action="usuarios.php?seccion=usuarios"
+                                                action="../apis/administrador_usuarios.php"
                                                 method="POST"
                                             >
 
@@ -848,7 +744,7 @@ foreach ($usuarios as $usuario) {
                                                         name="accion"
                                                         value="desactivar"
                                                         class="btn btn-danger btn-sm"
-                                                        onclick="return confirm('¿Deseas desactivar este usuario?')"
+                                                        data-confirm="¿Deseas desactivar este usuario?"
                                                     >
 
                                                         <i class="bi bi-person-x"></i>
@@ -933,5 +829,6 @@ foreach ($usuarios as $usuario) {
 
 </main>
 
+<script src="../js/form-confirm.js" defer></script>
 </body>
 </html>

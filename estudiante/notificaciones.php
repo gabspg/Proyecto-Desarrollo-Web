@@ -41,17 +41,33 @@ if (!$stmt->fetchColumn()) {
     exit('Cuenta no activa.');
 }
 
+if (empty($_SESSION['csrf_notificaciones_est'])) {
+    $_SESSION['csrf_notificaciones_est'] = bin2hex(random_bytes(32));
+}
+$tokenNotificaciones = $_SESSION['csrf_notificaciones_est'];
+$mensaje = (string)($_SESSION['mensaje_notificaciones'] ?? '');
+$errorNotificaciones = (string)($_SESSION['error_notificaciones'] ?? '');
+unset($_SESSION['mensaje_notificaciones'], $_SESSION['error_notificaciones']);
+
 /* ==========================================================
-   CONSULTAR NOTIFICACIONES
-   CORREGIDO: SIN COLUMNA 'leida'
+   MARCAR COMO LEÍDAS Y CONSULTAR NOTIFICACIONES
    ========================================================== */
+
+$stmt = $conexion->prepare("
+    UPDATE notificaciones
+    SET leido = 1
+    WHERE usuario_id = ?
+      AND leido = 0
+");
+$stmt->execute([$id]);
 
 $stmt = $conexion->prepare("
     SELECT
         id,
         solicitud_id,
         tipo,
-        mensaje
+        mensaje,
+        fecha_envio
     FROM notificaciones
     WHERE usuario_id = ?
     ORDER BY id DESC
@@ -80,16 +96,20 @@ $totalNotificaciones = count($notificaciones);
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+        crossorigin="anonymous"
     >
 
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
         rel="stylesheet"
+        integrity="sha384-tViUnnbYAV00FLIhhi3v/dWt3Jxw4gZQcNoSCxCIFNJVCx7/D55/wXsrNIRANwdD"
+        crossorigin="anonymous"
     >
 
     <link rel="stylesheet" href="../estilos/tutor.css">
 
-    <style>
+    <style nonce="<?= htmlspecialchars($cspNonce, ENT_QUOTES, "UTF-8") ?>">
         .tl-box {
             background: #fff;
             border: 1px solid #e8edf0;
@@ -218,27 +238,17 @@ $totalNotificaciones = count($notificaciones);
     </a>
 
     <a class="activo" href="notificaciones.php">
-
         <i class="bi bi-bell-fill"></i>
         Notificaciones
-
-        <?php if ($totalNotificaciones > 0): ?>
-
-            <span class="tl-alert">
-                <?= $totalNotificaciones ?>
-            </span>
-
-        <?php endif; ?>
-
     </a>
 
-    <a
-        class="salir"
-        href="/tutorias/autenticacion/logout.php"
-    >
+    <form action="../apis/logout.php" method="POST" class="logout-form">
+        <input type="hidden" name="token" value="<?= e($_SESSION["csrf_logout"]) ?>">
+        <button type="submit" class="salir">
         <i class="bi bi-box-arrow-right"></i>
         Cerrar sesión
-    </a>
+        </button>
+    </form>
 
 </aside>
 
@@ -322,6 +332,14 @@ $totalNotificaciones = count($notificaciones);
                     <div class="tl-muted mt-1">
                         Consulta tus avisos y actualizaciones.
                     </div>
+
+                    <?php if ($mensaje !== ''): ?>
+                        <div class="alert alert-success"><?= e($mensaje) ?></div>
+                    <?php endif; ?>
+
+                    <?php if ($errorNotificaciones !== ''): ?>
+                        <div class="alert alert-danger"><?= e($errorNotificaciones) ?></div>
+                    <?php endif; ?>
 
                 </div>
 
@@ -420,20 +438,34 @@ $totalNotificaciones = count($notificaciones);
                                 <?= nl2br(e($n['mensaje'])) ?>
                             </p>
 
-                            <?php if (!empty($n['solicitud_id'])): ?>
+                            <div class="tl-muted mb-2">
+                                <?= e(date('d/m/Y H:i', strtotime($n['fecha_envio']))) ?>
+                            </div>
 
-                                <a
-                                    class="tl-link"
-                                    href="solicitudes.php?vista=solicitudes"
+                            <div class="d-flex align-items-center gap-3 flex-wrap">
+                                <?php if (!empty($n['solicitud_id'])): ?>
+                                    <a
+                                        class="tl-link"
+                                        href="solicitudes.php?vista=solicitudes"
+                                    >
+                                        Ver mis solicitudes
+                                        <i class="bi bi-arrow-right"></i>
+                                    </a>
+                                <?php endif; ?>
+
+                                <form
+                                    method="post"
+                                    action="../apis/notificaciones.php"
+                                    data-confirm="¿Deseas eliminar esta notificación?"
                                 >
-
-                                    Ver mis solicitudes
-
-                                    <i class="bi bi-arrow-right"></i>
-
-                                </a>
-
-                            <?php endif; ?>
+                                    <input type="hidden" name="token" value="<?= e($tokenNotificaciones) ?>">
+                                    <input type="hidden" name="notificacion_id" value="<?= (int)$n['id'] ?>">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                                        <i class="bi bi-trash"></i>
+                                        Eliminar
+                                    </button>
+                                </form>
+                            </div>
 
                         </div>
 
@@ -449,5 +481,6 @@ $totalNotificaciones = count($notificaciones);
 
 </main>
 
+<script src="../js/form-confirm.js" defer></script>
 </body>
 </html>

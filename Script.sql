@@ -177,6 +177,12 @@ CREATE TABLE disponibilidades (
             OR cupo_maximo = 1
         ),
 
+    CONSTRAINT chk_cupo_tutoria_grupal
+        CHECK (
+            tipo_tutoria <> 'GRUPAL'
+            OR cupo_maximo >= 2
+        ),
+
     INDEX idx_tutor_fecha (tutor_id, fecha)
 
 ) ENGINE=InnoDB;
@@ -338,25 +344,6 @@ VALUES
 ('ESTUDIANTE'),
 ('TUTOR'),
 ('ADMIN');
-
--- Guardar solicitudes de recuperación de contraseña
-CREATE TABLE recuperacion_contrasenas (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-
-    usuario_id INT NOT NULL,
-
-    token_hash VARCHAR(64) NOT NULL UNIQUE,
-
-    fecha_vencimiento DATETIME NOT NULL,
-
-    utilizado BOOLEAN NOT NULL DEFAULT FALSE,
-
-    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-    FOREIGN KEY (usuario_id)
-        REFERENCES usuarios(id)
-        ON DELETE CASCADE
-);
 
 USE db_tutorias;
 

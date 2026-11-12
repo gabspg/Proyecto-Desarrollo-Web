@@ -32,6 +32,8 @@ if (empty($_SESSION["token_atenciones_tutor"])) {
 $token = $_SESSION["token_atenciones_tutor"];
 
 $error = "";
+$error = (string)($_SESSION["error_atenciones_tutor"] ?? $error);
+unset($_SESSION["error_atenciones_tutor"]);
 $mensaje = "";
 
 $solicitudId = 0;
@@ -69,269 +71,7 @@ if (!$stmt->fetch()) {
    PROCESAR REGISTRO Y EDICIÓN
    ========================================================== */
 
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $tokenRecibido = $_POST["token"] ?? "";
-
-    if (
-        !is_string($tokenRecibido) ||
-        !hash_equals($token, $tokenRecibido)
-    ) {
-        exit("Solicitud no válida.");
-    }
-
-    $accion = $_POST["accion"] ?? "";
-
-    if (in_array($accion, ["registrar", "editar"], true)) {
-
-        $seccion = $accion;
-
-        $solicitudId = filter_input(
-            INPUT_POST,
-            "solicitud_id",
-            FILTER_VALIDATE_INT
-        ) ?: 0;
-
-        $asistencia = $_POST["asistencia"] ?? "";
-        $observaciones = trim($_POST["observaciones"] ?? "");
-        $resultado = trim($_POST["resultado"] ?? "");
-        $recomendaciones = trim($_POST["recomendaciones"] ?? "");
-
-        if (!$solicitudId) {
-            $error = "Selecciona una solicitud válida.";
-        }
-
-        if (
-            $error === "" &&
-            !in_array($asistencia, ["0", "1"], true)
-        ) {
-            $error = "Selecciona si el estudiante asistió.";
-        }
-
-        if ($error === "" && $resultado === "") {
-            $error = "Ingresa el resultado de la tutoría.";
-        }
-
-        /* VERIFICAR SOLICITUD DEL TUTOR */
-
-        if ($error === "") {
-
-            $stmt = $conexion->prepare(
-                "SELECT
-                    s.id,
-                    s.estado,
-                    d.fecha,
-                    d.hora_fin
-                 FROM solicitudes_tutoria s
-                 INNER JOIN disponibilidades d
-                    ON d.id = s.disponibilidad_id
-                 WHERE s.id = :solicitud
-                   AND d.tutor_id = :tutor"
-            );
-
-            $stmt->execute([
-                "solicitud" => $solicitudId,
-                "tutor" => $tutorId
-            ]);
-
-            $solicitud = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$solicitud) {
-
-                $error = "La solicitud no pertenece a este tutor.";
-
-            } elseif (
-                !in_array(
-                    $solicitud["estado"],
-                    ["ACEPTADA", "ATENDIDA"],
-                    true
-                )
-            ) {
-
-                $error = "Solo puedes registrar atenciones de solicitudes aceptadas.";
-
-            } elseif (
-                strtotime(
-                    $solicitud["fecha"] . " " .
-                    $solicitud["hora_fin"]
-                ) > time()
-            ) {
-
-                $error = "La tutoría todavía no ha finalizado.";
-            }
-        }
-
-        /* GUARDAR ATENCIÓN */
-
-        if ($error === "") {
-
-            try {
-
-                $conexion->beginTransaction();
-
-                $stmt = $conexion->prepare(
-                    "SELECT id
-                     FROM atenciones
-                     WHERE solicitud_id = :solicitud"
-                );
-
-                $stmt->execute([
-                    "solicitud" => $solicitudId
-                ]);
-
-                $atencionExistente = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                if (
-                    $accion === "registrar" &&
-                    $atencionExistente
-                ) {
-
-                    throw new RuntimeException(
-                        "Esta solicitud ya tiene una atención registrada."
-                    );
-                }
-
-                if (
-                    $accion === "editar" &&
-                    !$atencionExistente
-                ) {
-
-                    throw new RuntimeException(
-                        "No existe una atención para editar."
-                    );
-                }
-
-                if ($accion === "registrar") {
-
-                    $stmt = $conexion->prepare(
-                        "INSERT INTO atenciones
-                        (
-                            solicitud_id,
-                            registrado_por,
-                            asistencia,
-                            observaciones,
-                            resultado,
-                            recomendaciones
-                        )
-                        VALUES
-                        (
-                            :solicitud,
-                            :tutor,
-                            :asistencia,
-                            :observaciones,
-                            :resultado,
-                            :recomendaciones
-                        )"
-                    );
-
-                    $stmt->execute([
-                        "solicitud" => $solicitudId,
-                        "tutor" => $tutorId,
-                        "asistencia" => (int)$asistencia,
-                        "observaciones" => $observaciones,
-                        "resultado" => $resultado,
-                        "recomendaciones" => $recomendaciones
-                    ]);
-
-                    /* ACTUALIZAR SOLICITUD A ATENDIDA */
-
-                    $stmt = $conexion->prepare(
-                        "UPDATE solicitudes_tutoria
-                         SET estado = 'ATENDIDA'
-                         WHERE id = :solicitud
-                           AND estado = 'ACEPTADA'"
-                    );
-
-                    $stmt->execute([
-                        "solicitud" => $solicitudId
-                    ]);
-
-                    if ($stmt->rowCount() !== 1) {
-                        throw new RuntimeException(
-                            "No se pudo actualizar el estado de la solicitud."
-                        );
-                    }
-
-                    /* GUARDAR HISTORIAL */
-
-                    $stmt = $conexion->prepare(
-                        "INSERT INTO historial_estados
-                        (
-                            solicitud_id,
-                            estado_anterior,
-                            estado_nuevo,
-                            cambiado_por,
-                            comentario
-                        )
-                        VALUES
-                        (
-                            :solicitud,
-                            'ACEPTADA',
-                            'ATENDIDA',
-                            :tutor,
-                            'Se registró la atención de la tutoría.'
-                        )"
-                    );
-
-                    $stmt->execute([
-                        "solicitud" => $solicitudId,
-                        "tutor" => $tutorId
-                    ]);
-
-                    $_SESSION["mensaje_atenciones"] =
-                        "Atención registrada correctamente.";
-
-                } else {
-
-                    $stmt = $conexion->prepare(
-                        "UPDATE atenciones
-                         SET asistencia = :asistencia,
-                             observaciones = :observaciones,
-                             resultado = :resultado,
-                             recomendaciones = :recomendaciones
-                         WHERE solicitud_id = :solicitud
-                           AND registrado_por = :tutor"
-                    );
-
-                    $stmt->execute([
-                        "asistencia" => (int)$asistencia,
-                        "observaciones" => $observaciones,
-                        "resultado" => $resultado,
-                        "recomendaciones" => $recomendaciones,
-                        "solicitud" => $solicitudId,
-                        "tutor" => $tutorId
-                    ]);
-
-                    $_SESSION["mensaje_atenciones"] =
-                        "Atención actualizada correctamente.";
-                }
-
-                $conexion->commit();
-
-                header("Location: atenciones.php");
-                exit;
-
-            } catch (RuntimeException $e) {
-
-                if ($conexion->inTransaction()) {
-                    $conexion->rollBack();
-                }
-
-                $error = $e->getMessage();
-
-            } catch (PDOException $e) {
-
-                if ($conexion->inTransaction()) {
-                    $conexion->rollBack();
-                }
-
-                error_log($e->getMessage());
-
-                $error = "No se pudo guardar la atención.";
-            }
-        }
-    }
-}
 
 /* ==========================================================
    CONSULTAR SOLICITUDES PARA REGISTRAR
@@ -475,11 +215,15 @@ if (isset($_SESSION["mensaje_atenciones"])) {
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+        crossorigin="anonymous"
     >
 
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
         rel="stylesheet"
+        integrity="sha384-tViUnnbYAV00FLIhhi3v/dWt3Jxw4gZQcNoSCxCIFNJVCx7/D55/wXsrNIRANwdD"
+        crossorigin="anonymous"
     >
 
     <link rel="stylesheet" href="../estilos/tutor.css">
@@ -530,10 +274,18 @@ if (isset($_SESSION["mensaje_atenciones"])) {
         Registro de atenciones
     </a>
 
-    <a href="/tutorias/autenticacion/logout.php" class="salir">
-        <i class="bi bi-box-arrow-right"></i>
-        Cerrar sesión
+    <a href="notificaciones.php">
+        <i class="bi bi-bell-fill"></i>
+        Notificaciones
     </a>
+
+    <form action="../apis/logout.php" method="POST" class="logout-form">
+        <input type="hidden" name="token" value="<?= escapar($_SESSION["csrf_logout"]) ?>">
+        <button type="submit" class="salir">
+            <i class="bi bi-box-arrow-right"></i>
+            Cerrar sesión
+        </button>
+    </form>
 
 </aside>
 
@@ -647,7 +399,7 @@ if (isset($_SESSION["mensaje_atenciones"])) {
                         : "Registrar nueva atención" ?>
                 </h4>
 
-                <form method="POST" action="atenciones.php">
+                <form method="POST" action="../apis/tutor_atenciones.php">
 
                     <input
                         type="hidden"

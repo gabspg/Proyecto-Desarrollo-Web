@@ -1,24 +1,54 @@
 
 <?php
-// Iniciar la sesión si todavía no está iniciada
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . "/sesion.php";
+require_once __DIR__ . "/../config/conexion.php";
 
 // Función para verificar el acceso de los usuarios
 function verificarAcceso($rolNecesario)
 {
+    global $conexion;
+    global $cspNonce;
+
     // Verificar si el usuario ha iniciado sesión
     if (!isset($_SESSION['usuario_id'])) {
         header("Location: ../index.php");
         exit;
     }
 
-    // Obtener el rol del usuario
-    $rolUsuario = $_SESSION['rol'] ?? '';
+    $usuarioId = filter_var(
+        $_SESSION['usuario_id'],
+        FILTER_VALIDATE_INT
+    );
 
-    // Verificar si el usuario tiene permiso
-    if ($rolUsuario !== $rolNecesario) {
+    $consulta = $conexion->prepare(
+        "SELECT u.contrasena, r.nombre AS rol
+         FROM usuarios u
+         INNER JOIN roles r ON r.id = u.rol_id
+         WHERE u.id = :id
+           AND u.estado = 'ACTIVO'"
+    );
+    $consulta->execute([
+        "id" => $usuarioId ?: 0
+    ]);
+    $usuario = $consulta->fetch(PDO::FETCH_ASSOC);
+
+    if (
+        !$usuario ||
+        !hash_equals(
+            hash('sha256', (string)$usuario['contrasena']),
+            (string)($_SESSION['usuario_auth_version'] ?? '')
+        )
+    ) {
+        $_SESSION = [];
+        session_destroy();
+        header("Location: ../index.php?error=1");
+        exit;
+    }
+
+    if (
+        $usuario['rol'] !== $rolNecesario ||
+        ($_SESSION['rol'] ?? '') !== $rolNecesario
+    ) {
         http_response_code(403);
         ?>
         <!DOCTYPE html>
@@ -31,7 +61,7 @@ function verificarAcceso($rolNecesario)
             <!-- CSS DEL INICIO DE SESIÓN -->
             <link rel="stylesheet" href="/tutorias/estilos/login.css">
 
-            <style>
+            <style nonce="<?= htmlspecialchars($cspNonce, ENT_QUOTES, "UTF-8") ?>">
                 body {
                     min-height: 100vh;
                     display: flex;
