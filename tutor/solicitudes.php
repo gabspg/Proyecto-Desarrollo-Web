@@ -21,6 +21,8 @@ if (empty($_SESSION["token_solicitudes_tutor"])) {
 
 $token = $_SESSION["token_solicitudes_tutor"];
 $error = "";
+$error = (string)($_SESSION["error_solicitudes_tutor"] ?? $error);
+unset($_SESSION["error_solicitudes_tutor"]);
 $mensaje = "";
 
 /* ==========================================================
@@ -45,174 +47,7 @@ if (!$stmt->fetch()) {
    ACEPTAR O RECHAZAR SOLICITUDES
    ========================================================== */
 
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $tokenRecibido = $_POST["token"] ?? "";
-
-    if (!is_string($tokenRecibido) ||
-        !hash_equals($token, $tokenRecibido)) {
-        exit("Solicitud no válida.");
-    }
-
-    $solicitudId = filter_input(
-        INPUT_POST,
-        "solicitud_id",
-        FILTER_VALIDATE_INT
-    );
-
-    $accion = $_POST["accion"] ?? "";
-
-    if (!$solicitudId) {
-        $error = "La solicitud seleccionada no es válida.";
-    } elseif (!in_array($accion, ["aceptar", "rechazar"], true)) {
-        $error = "Acción no permitida.";
-    } else {
-
-        try {
-            $conexion->beginTransaction();
-
-            $stmt = $conexion->prepare(
-                "SELECT
-                    s.id,
-                    s.estudiante_id,
-                    s.estado,
-                    s.disponibilidad_id,
-                    d.estado AS estado_disponibilidad,
-                    d.cupo_actual,
-                    d.cupo_maximo
-                 FROM solicitudes_tutoria s
-                 INNER JOIN disponibilidades d
-                    ON d.id = s.disponibilidad_id
-                 WHERE s.id = :solicitud
-                   AND d.tutor_id = :tutor
-                 FOR UPDATE"
-            );
-            $stmt->execute([
-                "solicitud" => $solicitudId,
-                "tutor" => $tutorId
-            ]);
-
-            $solicitud = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$solicitud) {
-                throw new RuntimeException("No se encontró la solicitud.");
-            }
-
-            if ($solicitud["estado"] !== "PENDIENTE") {
-                throw new RuntimeException("Esta solicitud ya fue procesada.");
-            }
-
-            $estadoNuevo = $accion === "aceptar"
-                ? "ACEPTADA"
-                : "RECHAZADA";
-
-            if ($accion === "aceptar") {
-
-                if ($solicitud["estado_disponibilidad"] !== "DISPONIBLE") {
-                    throw new RuntimeException("La tutoría ya no está disponible.");
-                }
-
-                $stmt = $conexion->prepare(
-                    "UPDATE disponibilidades
-                     SET cupo_actual = cupo_actual + 1,
-                         estado = CASE
-                             WHEN cupo_actual + 1 >= cupo_maximo
-                             THEN 'AGOTADO'
-                             ELSE 'DISPONIBLE'
-                         END
-                     WHERE id = :disponibilidad
-                       AND estado = 'DISPONIBLE'
-                       AND cupo_actual < cupo_maximo"
-                );
-                $stmt->execute([
-                    "disponibilidad" => $solicitud["disponibilidad_id"]
-                ]);
-
-                if ($stmt->rowCount() !== 1) {
-                    throw new RuntimeException("No hay cupos disponibles.");
-                }
-            }
-
-            $stmt = $conexion->prepare(
-                "UPDATE solicitudes_tutoria
-                 SET estado = :estado
-                 WHERE id = :solicitud
-                   AND estado = 'PENDIENTE'"
-            );
-            $stmt->execute([
-                "estado" => $estadoNuevo,
-                "solicitud" => $solicitudId
-            ]);
-
-            if ($stmt->rowCount() !== 1) {
-                throw new RuntimeException("No se pudo actualizar la solicitud.");
-            }
-
-            $comentario = $accion === "aceptar"
-                ? "El tutor aceptó la solicitud."
-                : "El tutor rechazó la solicitud.";
-
-            $stmt = $conexion->prepare(
-                "INSERT INTO historial_estados
-                (solicitud_id, estado_anterior, estado_nuevo,
-                 cambiado_por, comentario)
-                 VALUES
-                (:solicitud, 'PENDIENTE', :nuevo,
-                 :tutor, :comentario)"
-            );
-            $stmt->execute([
-                "solicitud" => $solicitudId,
-                "nuevo" => $estadoNuevo,
-                "tutor" => $tutorId,
-                "comentario" => $comentario
-            ]);
-
-            $tipoNotificacion = $accion === "aceptar"
-                ? "ACEPTACION"
-                : "RECHAZO";
-
-            $textoNotificacion = $accion === "aceptar"
-                ? "Tu solicitud de tutoría fue aceptada."
-                : "Tu solicitud de tutoría fue rechazada.";
-
-            $stmt = $conexion->prepare(
-                "INSERT INTO notificaciones
-                (usuario_id, solicitud_id, tipo, mensaje)
-                 VALUES
-                (:estudiante, :solicitud, :tipo, :mensaje)"
-            );
-            $stmt->execute([
-                "estudiante" => $solicitud["estudiante_id"],
-                "solicitud" => $solicitudId,
-                "tipo" => $tipoNotificacion,
-                "mensaje" => $textoNotificacion
-            ]);
-
-            $conexion->commit();
-
-            $_SESSION["mensaje_solicitudes_tutor"] =
-                $accion === "aceptar"
-                ? "Solicitud aceptada correctamente."
-                : "Solicitud rechazada correctamente.";
-
-            header("Location: solicitudes.php");
-            exit;
-
-        } catch (RuntimeException $e) {
-            if ($conexion->inTransaction()) {
-                $conexion->rollBack();
-            }
-            $error = $e->getMessage();
-
-        } catch (PDOException $e) {
-            if ($conexion->inTransaction()) {
-                $conexion->rollBack();
-            }
-            error_log($e->getMessage());
-            $error = "No se pudo procesar la solicitud.";
-        }
-    }
-}
 
 if (isset($_SESSION["mensaje_solicitudes_tutor"])) {
     $mensaje = $_SESSION["mensaje_solicitudes_tutor"];
@@ -270,8 +105,8 @@ foreach ($solicitudes as $solicitud) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solicitudes recibidas - TutorLink</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" integrity="sha384-tViUnnbYAV00FLIhhi3v/dWt3Jxw4gZQcNoSCxCIFNJVCx7/D55/wXsrNIRANwdD" crossorigin="anonymous">
     <link rel="stylesheet" href="../estilos/tutor.css">
 </head>
 <body>
@@ -305,9 +140,16 @@ foreach ($solicitudes as $solicitud) {
         <i class="bi bi-clipboard-check-fill"></i> Registro de atenciones
     </a>
 
-    <a href="/tutorias/autenticacion/logout.php" class="salir">
-        <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+    <a href="notificaciones.php">
+        <i class="bi bi-bell-fill"></i> Notificaciones
     </a>
+
+    <form action="../apis/logout.php" method="POST" class="logout-form">
+        <input type="hidden" name="token" value="<?= escapar($_SESSION["csrf_logout"]) ?>">
+        <button type="submit" class="salir">
+            <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+        </button>
+    </form>
 </aside>
 
 <main class="contenido">
@@ -448,7 +290,7 @@ foreach ($solicitudes as $solicitud) {
                                     <?php endif; ?>
                                 </td>
 
-                                <td style="min-width:180px;">
+                                <td class="tutor-motivo-columna">
                                     <?= nl2br(escapar($solicitud["motivo"])) ?>
                                 </td>
 
@@ -473,8 +315,8 @@ foreach ($solicitudes as $solicitud) {
 
                                         <div class="d-flex gap-2 flex-wrap">
 
-                                            <form method="POST" action="solicitudes.php"
-                                                  onsubmit="return confirm('¿Deseas aceptar esta solicitud?')">
+                                            <form method="POST" action="../apis/tutor_solicitudes.php"
+                                                  data-confirm="¿Deseas aceptar esta solicitud?">
                                                 <input type="hidden" name="token" value="<?= escapar($token) ?>">
                                                 <input type="hidden" name="solicitud_id" value="<?= (int)$solicitud["id"] ?>">
                                                 <input type="hidden" name="accion" value="aceptar">
@@ -485,8 +327,8 @@ foreach ($solicitudes as $solicitud) {
                                                 </button>
                                             </form>
 
-                                            <form method="POST" action="solicitudes.php"
-                                                  onsubmit="return confirm('¿Deseas rechazar esta solicitud?')">
+                                            <form method="POST" action="../apis/tutor_solicitudes.php"
+                                                  data-confirm="¿Deseas rechazar esta solicitud?">
                                                 <input type="hidden" name="token" value="<?= escapar($token) ?>">
                                                 <input type="hidden" name="solicitud_id" value="<?= (int)$solicitud["id"] ?>">
                                                 <input type="hidden" name="accion" value="rechazar">
@@ -526,5 +368,6 @@ foreach ($solicitudes as $solicitud) {
     </a>
 
 </main>
+<script src="../js/form-confirm.js" defer></script>
 </body>
 </html>

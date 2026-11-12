@@ -71,16 +71,11 @@ $atendidas = contar(
     $id
 );
 
-/* ==========================================================
-   NOTIFICACIONES
-   CORREGIDO: SE ELIMINÓ LA COLUMNA INEXISTENTE 'leida'
-   ========================================================== */
-
 $noLeidas = contar(
     $conexion,
     "SELECT COUNT(*)
      FROM notificaciones
-     WHERE usuario_id=?",
+     WHERE usuario_id=? AND leido=0",
     $id
 );
 
@@ -155,16 +150,20 @@ function meet($url) {
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+        crossorigin="anonymous"
     >
 
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
         rel="stylesheet"
+        integrity="sha384-tViUnnbYAV00FLIhhi3v/dWt3Jxw4gZQcNoSCxCIFNJVCx7/D55/wXsrNIRANwdD"
+        crossorigin="anonymous"
     >
 
     <link rel="stylesheet" href="../estilos/tutor.css">
 
-    <style>
+    <style nonce="<?= htmlspecialchars($cspNonce, ENT_QUOTES, "UTF-8") ?>">
         .tl-box {
             background: #fff;
             border: 1px solid #e7ecef;
@@ -268,13 +267,13 @@ function meet($url) {
         <?php endif; ?>
     </a>
 
-    <a
-        class="salir"
-        href="/tutorias/autenticacion/logout.php"
-    >
+    <form action="../apis/logout.php" method="POST" class="logout-form">
+        <input type="hidden" name="token" value="<?= htmlspecialchars($_SESSION["csrf_logout"], ENT_QUOTES, "UTF-8") ?>">
+        <button type="submit" class="salir">
         <i class="bi bi-box-arrow-right"></i>
         Cerrar sesión
-    </a>
+        </button>
+    </form>
 
 </aside>
 

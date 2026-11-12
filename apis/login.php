@@ -1,14 +1,8 @@
 
 <?php
-session_start();
-
-require_once "../config/conexion.php";
-
-// Verificar que los datos vengan del formulario
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header("Location: ../index.php");
-    exit;
-}
+require_once __DIR__ . "/bootstrap.php";
+apiRequerirPost("csrf_login");
+require_once __DIR__ . "/../config/conexion.php";
 
 // Recibir correo o nombre de usuario
 $usuarioIngresado = trim($_POST['usuario'] ?? '');
@@ -85,6 +79,10 @@ $_SESSION['usuario_id'] = $usuario['id'];
 $_SESSION['nombre'] = $usuario['nombre'];
 $_SESSION['apellido'] = $usuario['apellido'];
 $_SESSION['rol'] = $usuario['rol'];
+$_SESSION['usuario_auth_version'] = hash(
+    'sha256',
+    (string)$usuario['contrasena']
+);
 
 // Redirigir al panel correspondiente
 header("Location: " . $rutas[$usuario['rol']]);

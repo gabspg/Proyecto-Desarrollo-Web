@@ -57,6 +57,8 @@ if (!in_array($vista, ['solicitudes', 'tutorias'], true)) {
 }
 
 $error = '';
+$error = (string)($_SESSION['error_solicitudes_estudiante'] ?? $error);
+unset($_SESSION['error_solicitudes_estudiante']);
 $flash = $_SESSION['flash_sol_est'] ?? '';
 unset($_SESSION['flash_sol_est']);
 
@@ -64,176 +66,7 @@ unset($_SESSION['flash_sol_est']);
    CANCELAR SOLICITUD
    ========================================================== */
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    if (!hash_equals($token, (string)($_POST['token'] ?? ''))) {
-        exit('Solicitud no válida.');
-    }
-
-    $sid = filter_input(
-        INPUT_POST,
-        'solicitud_id',
-        FILTER_VALIDATE_INT
-    );
-
-    if (!$sid || ($_POST['accion'] ?? '') !== 'cancelar') {
-
-        $error = 'Acción inválida.';
-
-    } else {
-
-        try {
-            $conexion->beginTransaction();
-
-            $stmt = $conexion->prepare("
-                SELECT id, disponibilidad_id, estado
-                FROM solicitudes_tutoria
-                WHERE id = ?
-                  AND estudiante_id = ?
-                FOR UPDATE
-            ");
-
-            $stmt->execute([$sid, $id]);
-            $s = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if (
-                !$s ||
-                !in_array($s['estado'], ['PENDIENTE', 'ACEPTADA'], true)
-            ) {
-                throw new RuntimeException(
-                    'Esta solicitud ya no puede cancelarse.'
-                );
-            }
-
-            $stmt = $conexion->prepare("
-                SELECT
-                    id,
-                    tutor_id,
-                    fecha,
-                    hora_inicio,
-                    cupo_actual,
-                    cupo_maximo,
-                    estado
-                FROM disponibilidades
-                WHERE id = ?
-                FOR UPDATE
-            ");
-
-            $stmt->execute([$s['disponibilidad_id']]);
-            $d = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if (
-                !$d ||
-                strtotime($d['fecha'] . ' ' . $d['hora_inicio']) <= time()
-            ) {
-                throw new RuntimeException(
-                    'No puedes cancelar una tutoría que ya comenzó.'
-                );
-            }
-
-            $stmt = $conexion->prepare("
-                UPDATE solicitudes_tutoria
-                SET estado = 'CANCELADA',
-                    reserva_activa = 0
-                WHERE id = ?
-                  AND estudiante_id = ?
-            ");
-
-            $stmt->execute([$sid, $id]);
-
-            if ($s['estado'] === 'ACEPTADA') {
-
-                $stmt = $conexion->prepare("
-                    UPDATE disponibilidades
-                    SET
-                        cupo_actual = GREATEST(cupo_actual - 1, 0),
-                        estado = CASE
-                            WHEN estado = 'AGOTADO'
-                            THEN 'DISPONIBLE'
-                            ELSE estado
-                        END
-                    WHERE id = ?
-                      AND estado <> 'CANCELADO'
-                ");
-
-                $stmt->execute([$d['id']]);
-            }
-
-            $stmt = $conexion->prepare("
-                INSERT INTO historial_estados
-                (
-                    solicitud_id,
-                    estado_anterior,
-                    estado_nuevo,
-                    cambiado_por,
-                    comentario
-                )
-                VALUES (
-                    ?,
-                    ?,
-                    'CANCELADA',
-                    ?,
-                    'Cancelación realizada por el estudiante'
-                )
-            ");
-
-            $stmt->execute([
-                $sid,
-                $s['estado'],
-                $id
-            ]);
-
-            $stmt = $conexion->prepare("
-                INSERT INTO notificaciones
-                (
-                    usuario_id,
-                    solicitud_id,
-                    tipo,
-                    mensaje
-                )
-                VALUES (
-                    ?,
-                    ?,
-                    'SOLICITUD',
-                    'El estudiante canceló su solicitud de tutoría.'
-                )
-            ");
-
-            $stmt->execute([
-                $d['tutor_id'],
-                $sid
-            ]);
-
-            $conexion->commit();
-
-            $_SESSION['flash_sol_est'] =
-                'Solicitud cancelada correctamente.';
-
-            header(
-                'Location: solicitudes.php?vista=' .
-                urlencode($vista)
-            );
-            exit;
-
-        } catch (RuntimeException $ex) {
-
-            if ($conexion->inTransaction()) {
-                $conexion->rollBack();
-            }
-
-            $error = $ex->getMessage();
-
-        } catch (Throwable $ex) {
-
-            if ($conexion->inTransaction()) {
-                $conexion->rollBack();
-            }
-
-            error_log($ex->getMessage());
-            $error = 'No fue posible cancelar la solicitud.';
-        }
-    }
-}
 
 /* ==========================================================
    CONSULTAR SOLICITUDES
@@ -294,13 +127,14 @@ foreach ($solicitudes as $s) {
 }
 
 /* ==========================================================
-   NOTIFICACIONES - SIN COLUMNA LEIDA
+   NOTIFICACIONES NO LEÍDAS
    ========================================================== */
 
 $stmt = $conexion->prepare("
     SELECT COUNT(*)
     FROM notificaciones
     WHERE usuario_id = ?
+      AND leido = 0
 ");
 
 $stmt->execute([$id]);
@@ -323,16 +157,20 @@ $noLeidas = (int)$stmt->fetchColumn();
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+        crossorigin="anonymous"
     >
 
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
         rel="stylesheet"
+        integrity="sha384-tViUnnbYAV00FLIhhi3v/dWt3Jxw4gZQcNoSCxCIFNJVCx7/D55/wXsrNIRANwdD"
+        crossorigin="anonymous"
     >
 
     <link rel="stylesheet" href="../estilos/tutor.css">
 
-    <style>
+    <style nonce="<?= htmlspecialchars($cspNonce, ENT_QUOTES, "UTF-8") ?>">
         .tl-box {
             background: #fff;
             border: 1px solid #e8edf0;
@@ -429,7 +267,7 @@ $noLeidas = (int)$stmt->fetchColumn();
     <a
         class="<?= $vista === 'solicitudes' ? 'activo' : '' ?>"
         href="solicitudes.php?vista=solicitudes"
-        style="display:none"
+        class="estudiante-menu-enlace-oculto"
     ></a>
 
     <a href="buscar.php">
@@ -472,13 +310,13 @@ $noLeidas = (int)$stmt->fetchColumn();
 
     </a>
 
-    <a
-        class="salir"
-        href="/tutorias/autenticacion/logout.php"
-    >
+    <form action="../apis/logout.php" method="POST" class="logout-form">
+        <input type="hidden" name="token" value="<?= e($_SESSION["csrf_logout"]) ?>">
+        <button type="submit" class="salir">
         <i class="bi bi-box-arrow-right"></i>
         Cerrar sesión
-    </a>
+        </button>
+    </form>
 
 </aside>
 
@@ -593,8 +431,7 @@ $noLeidas = (int)$stmt->fetchColumn();
                     <div class="tl-box">
 
                         <div
-                            class="fs-2 fw-bold"
-                            style="color:#102b3f"
+                            class="fs-2 fw-bold estudiante-color-principal"
                         >
                             <?= $n[1] ?>
                         </div>
@@ -782,9 +619,15 @@ $noLeidas = (int)$stmt->fetchColumn();
 
                             <form
                                 method="post"
+                                action="../apis/estudiante_solicitudes.php"
                                 class="mt-3"
-                                onsubmit="return confirm('¿Deseas cancelar esta solicitud?');"
+                                data-confirm="¿Deseas cancelar esta solicitud?"
                             >
+                                <input
+                                    type="hidden"
+                                    name="vista"
+                                    value="<?= e($vista) ?>"
+                                >
 
                                 <input
                                     type="hidden"
@@ -809,7 +652,7 @@ $noLeidas = (int)$stmt->fetchColumn();
                                     class="btn btn-outline-danger btn-sm"
                                 >
                                     <i class="bi bi-x-circle"></i>
-                                    Cancelar solicitud
+                                    Cancelar participación
                                 </button>
 
                             </form>
@@ -850,5 +693,6 @@ $noLeidas = (int)$stmt->fetchColumn();
 
 </main>
 
+<script src="../js/form-confirm.js" defer></script>
 </body>
 </html>

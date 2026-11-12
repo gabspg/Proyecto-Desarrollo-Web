@@ -126,6 +126,19 @@ a {
     color: #FFD1D1;
 }
 
+.sidebar .logout-form {
+    margin-top: auto;
+}
+
+.sidebar button.salir {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+}
+
 .sidebar .salir:hover {
     background-color: #783F49;
     color: var(--admin-blanco);
